@@ -45,10 +45,19 @@ build-type:          Simple
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
 
+test-suite test
+  type: exitcode-stdio-1.0 
+  hs-source-dirs: test
+  main-is: Spec.hs
+  build-depends: base, Cabal >= 1.8
+               , hspec
+               , etherium-haskell
+               , bytestring
+
 
 library
   -- Modules exported by the library.
-  -- exposed-modules:     
+  exposed-modules:  Etherium.RLP     
   
   -- Modules included in this library but not exported.
   -- other-modules:       
@@ -58,6 +67,8 @@ library
   
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.6 && <4.7
+                     , bytestring
+                     , containers
   
   -- Directories containing source files.
   -- hs-source-dirs:      
