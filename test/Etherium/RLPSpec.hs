@@ -35,7 +35,11 @@ instance Arbitrary RLP.Item where
   shrink (RLP.String bytes) = do
     shrunk <- shrink bytes
     return $ RLP.String shrunk
-  shrink _ = []
+  shrink (RLP.List list) =
+    let shrunkLists = do
+          shrunk <- shrink list
+          return $ RLP.List shrunk
+    in list ++ shrunkLists
 
 spec :: Spec
 spec = do
