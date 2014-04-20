@@ -69,8 +69,9 @@ library
   build-depends:       base >=4.6 && <4.7
                      , bytestring
                      , containers
-  
-  -- Directories containing source files.
+                     , attoparsec
+        
+        -- Directories containing source files.
   -- hs-source-dirs:      
   
   -- Base language which the package is written in.

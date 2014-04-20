@@ -15,34 +15,34 @@ spec :: Spec
 spec = do
   describe "handles example conversions" $ do
 
-    example "dog" "\x83\&dog"
+    "dog" `encodesTo` "\x83\&dog"
     
-    example 
-      (RLP.List ["cat", "dog"])
-      "\xc8\x83\&cat\x83\&dog"
+    (RLP.List ["cat", "dog"]) `encodesTo` "\xc8\x83\&cat\x83\&dog"
 
-    example "" "\x80"
+    "" `encodesTo` "\x80"
 
-    example "\x0f" "\x0f"
+    "\x0f" `encodesTo` "\x0f"
 
-    example "\x04\x00" "\x82\x04\x00"
+    "\x04\x00" `encodesTo` "\x82\x04\x00"
 
-    example "\x0f" "\x0f"
+    "\x0f" `encodesTo` "\x0f"
 
     -- [ [], [[]], [ [], [[]] ] ]
-    example 
-      (RLP.List [ (RLP.List [])
-                , (RLP.List [RLP.List []]) 
-                , (RLP.List [ (RLP.List []) 
-                            , (RLP.List [RLP.List []])
-                            ])
-                ])
+    (RLP.List [ (RLP.List [])
+              , (RLP.List [RLP.List []]) 
+              , (RLP.List [ (RLP.List []) 
+                          , (RLP.List [RLP.List []])
+                          ])
+              ]) 
+      `encodesTo`
       "\xc7\xc0\xc1\xc0\xc3\xc0\xc1\xc0"
 
     it "should encode lorem ipsum properly" $
       let encoded = RLP.encode "Lorem ipsum dolor sit amet, consectetur adipisicing elit"
       in ( "\xb8\x38Lorem " `BS.isPrefixOf` encoded) && ("elit" `BS.isSuffixOf` encoded )
   where 
-    example input output = do
+    input `encodesTo` output = do
       it ("should encode " <> show input <> " as " <> show output) $ 
         RLP.encode input `shouldBe` output
+      it ("should decode " <> show output <> " to " <> show input) $ 
+        RLP.decode output `shouldBe` Right input
