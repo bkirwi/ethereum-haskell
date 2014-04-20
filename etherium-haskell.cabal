@@ -53,6 +53,7 @@ test-suite test
                , hspec
                , etherium-haskell
                , bytestring
+               , QuickCheck
 
 
 library

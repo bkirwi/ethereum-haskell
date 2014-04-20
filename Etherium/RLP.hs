@@ -23,7 +23,7 @@ encode x = case x of
     encodeLength :: Word8 -> ByteString -> ByteString
     encodeLength offset bytes 
       | len == 1 && BS.head bytes < 0x7f = bytes
-      | len < 56 = prefix len <> bytes
+      | len <= 55 = prefix len <> bytes
       | otherwise = 
         let lenBytes = encodeInt len
             lenLen = BS.length lenBytes + 55
@@ -41,7 +41,7 @@ encodeInt = BS.unfoldr nextByte
 decodeInt :: ByteString -> Int
 decodeInt = BS.foldl addByte 0 
   where
-    addByte n b = shift 8 n + fromIntegral b
+    addByte n b = (n * 256) + fromIntegral b
       
 parseItem :: Parser (Int, Item)
 parseItem = do 

@@ -10,9 +10,30 @@ import Data.Monoid
 import qualified Etherium.RLP as RLP
 
 import Test.Hspec
+import Test.QuickCheck
+
+instance Arbitrary RLP.Item where
+  arbitrary = sized $ \n -> 
+    if n <= 2 then strGen
+    else oneof [strGen]
+    where 
+      strGen = do
+        words <- listOf arbitrary
+        return $ RLP.String $ BS.pack words
+      listGen = do 
+        list <- listOf arbitrary
+        return $ RLP.List list
+
+  shrink (RLP.String bytes) = do
+    shrunk <- shrink $ BS.unpack bytes
+    return $ RLP.String $ BS.pack shrunk
+  shrink _ = []
 
 spec :: Spec
 spec = do
+  it "should decode what it encodes" $ property $ \rlp ->
+    (RLP.decode . RLP.encode $ rlp) `shouldBe` Right rlp
+
   describe "handles example conversions" $ do
 
     "dog" `encodesTo` "\x83\&dog"
@@ -24,8 +45,6 @@ spec = do
     "\x0f" `encodesTo` "\x0f"
 
     "\x04\x00" `encodesTo` "\x82\x04\x00"
-
-    "\x0f" `encodesTo` "\x0f"
 
     -- [ [], [[]], [ [], [[]] ] ]
     (RLP.List [ (RLP.List [])
