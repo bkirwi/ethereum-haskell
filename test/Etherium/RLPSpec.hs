@@ -12,21 +12,29 @@ import qualified Etherium.RLP as RLP
 import Test.Hspec
 import Test.QuickCheck
 
+instance Arbitrary ByteString where 
+  arbitrary = do
+    bytes <- listOf arbitrary
+    return $ BS.pack bytes
+  shrink bytes = do
+    shrunk <- shrink $ BS.unpack bytes 
+    return $ BS.pack shrunk
+
 instance Arbitrary RLP.Item where
   arbitrary = sized $ \n -> 
     if n <= 2 then strGen
     else oneof [strGen]
     where 
       strGen = do
-        words <- listOf arbitrary
-        return $ RLP.String $ BS.pack words
+        bytes <- arbitrary
+        return . RLP.String $ bytes
       listGen = do 
         list <- listOf arbitrary
         return $ RLP.List list
 
   shrink (RLP.String bytes) = do
-    shrunk <- shrink $ BS.unpack bytes
-    return $ RLP.String $ BS.pack shrunk
+    shrunk <- shrink bytes
+    return $ RLP.String shrunk
   shrink _ = []
 
 spec :: Spec
