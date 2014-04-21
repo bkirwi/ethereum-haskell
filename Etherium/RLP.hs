@@ -34,7 +34,7 @@ encode x = case x of
         prefix n = BS.singleton $ offset + fromIntegral n
 
 encodeInt :: Int -> ByteString
-encodeInt = BS.unfoldr nextByte
+encodeInt = BS.reverse <$> BS.unfoldr nextByte
   where
     nextByte 0 = Nothing
     nextByte n = Just (fromIntegral n, n `quot` 256)

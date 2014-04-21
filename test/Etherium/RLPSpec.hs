@@ -35,6 +35,9 @@ instance Arbitrary RLP.Item where
 
 spec :: Spec
 spec = do
+  it "should decode what it encodes (ints)" $ property $ \n ->
+    n >= 0 ==> (RLP.decodeInt . RLP.encodeInt $ n) `shouldBe` n
+
   it "should decode what it encodes" $ property $ \rlp ->
     (RLP.decode . RLP.encode $ rlp) `shouldBe` Right rlp
 
@@ -46,9 +49,11 @@ spec = do
 
     "" `encodesTo` "\x80"
 
-    "\x0f" `encodesTo` "\x0f"
+    RLP.List [] `encodesTo` "\xc0"
 
-    "\x04\x00" `encodesTo` "\x82\x04\x00"
+    RLP.String (RLP.encodeInt 15) `encodesTo` "\x0f"
+
+    RLP.String (RLP.encodeInt 1024) `encodesTo` "\x82\x04\x00"
 
     -- [ [], [[]], [ [], [[]] ] ]
     (RLP.List [ (RLP.List [])
