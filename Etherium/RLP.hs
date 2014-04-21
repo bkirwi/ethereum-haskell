@@ -23,7 +23,7 @@ encode x = case x of
   where
     encodeLength :: Word8 -> ByteString -> ByteString
     encodeLength offset bytes 
-      | len == 1 && BS.head bytes < 0x7f = bytes
+      | len == 1 && BS.head bytes <= 0x7f = bytes
       | len <= 55 = prefix len <> bytes
       | otherwise = 
         let lenBytes = encodeInt len

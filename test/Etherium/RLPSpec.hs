@@ -41,6 +41,10 @@ spec = do
   it "should decode what it encodes" $ property $ \rlp ->
     (RLP.decode . RLP.encode $ rlp) `shouldBe` Right rlp
 
+  it "should encode small bytes as themselves" $ property $ \byte ->
+    let oneByte = BS.pack [byte]
+    in byte <= 0x7f ==> (RLP.encode $ RLP.String oneByte) `shouldBe` oneByte
+
   describe "handles example conversions" $ do
 
     "dog" `encodesTo` "\x83\&dog"
