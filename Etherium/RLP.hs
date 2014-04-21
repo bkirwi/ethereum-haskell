@@ -3,6 +3,7 @@ module Etherium.RLP(Item(String, List), encode, decode, encodeInt, decodeInt) wh
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
 import Data.Monoid
+import Data.Functor
 import Data.Word(Word8)
 import Data.String(IsString, fromString)
 import Data.Attoparsec.ByteString as ABS
@@ -48,9 +49,7 @@ parseItem = do
   first <- anyWord8
   let typeBits = 0xc0 .&. first
       parseString, parseList :: Int => Parser Item
-      parseString n = do
-        bytes <- ABS.take n
-        return $ String bytes
+      parseString n = String <$> ABS.take n
       parseList 0 = return $ List []
       parseList n = do
         (took, ret) <- parseItem
@@ -73,4 +72,4 @@ parseItem = do
     otherwise -> return (1, String $ BS.singleton first)
 
 decode :: ByteString => Either String Item
-decode = parseOnly (parseItem >>= return . snd)
+decode = parseOnly (snd <$> parseItem)

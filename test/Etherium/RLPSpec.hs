@@ -6,6 +6,7 @@ import Data.ByteString (ByteString)
 import Data.Char(ord)
 import Data.Word(Word8)
 import Data.Monoid
+import Data.Functor
 
 import qualified Etherium.RLP as RLP
 
@@ -14,31 +15,22 @@ import Test.QuickCheck
 
 instance Arbitrary ByteString where 
   arbitrary = do
-    bytes <- listOf arbitrary
-    return $ BS.pack bytes
-  shrink bytes = do
-    shrunk <- shrink $ BS.unpack bytes 
-    return $ BS.pack shrunk
+    BS.pack <$> listOf arbitrary
+  shrink bytes =
+    BS.pack <$> (shrink . BS.unpack $ bytes) 
 
 instance Arbitrary RLP.Item where
   arbitrary = sized $ \n -> 
     if n <= 2 then strGen
     else oneof [strGen]
     where 
-      strGen = do
-        bytes <- arbitrary
-        return . RLP.String $ bytes
-      listGen = do 
-        list <- listOf arbitrary
-        return $ RLP.List list
+      strGen = RLP.String <$> arbitrary
+      listGen = RLP.List <$> listOf arbitrary 
 
-  shrink (RLP.String bytes) = do
-    shrunk <- shrink bytes
-    return $ RLP.String shrunk
+  shrink (RLP.String bytes) =
+    RLP.String <$> shrink bytes
   shrink (RLP.List list) =
-    let shrunkLists = do
-          shrunk <- shrink list
-          return $ RLP.List shrunk
+    let shrunkLists = RLP.List <$> shrink list
     in list ++ shrunkLists
 
 spec :: Spec
