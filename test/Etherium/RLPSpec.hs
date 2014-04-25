@@ -12,6 +12,10 @@ import qualified Etherium.RLP as RLP
 
 import Test.Hspec
 import Test.QuickCheck
+import Data.String(IsString, fromString)
+
+instance IsString RLP.Item where
+  fromString = RLP.String . fromString
 
 instance Arbitrary ByteString where 
   arbitrary = do
@@ -35,8 +39,13 @@ instance Arbitrary RLP.Item where
 
 spec :: Spec
 spec = do
+
   it "should decode what it encodes (ints)" $ property $ \n ->
     n >= 0 ==> (RLP.decodeInt . RLP.encodeInt $ n) `shouldBe` n
+
+  describe "handle example integer conversions" $ do
+    it "should encode 15" $ RLP.encodeInt 15 `shouldBe` "\x0f"
+    it "should encode 1024" $ RLP.encodeInt 1024 `shouldBe` "\x04\x00"
 
   it "should decode what it encodes" $ property $ \rlp ->
     (RLP.decode . RLP.encode $ rlp) `shouldBe` Right rlp
@@ -55,9 +64,9 @@ spec = do
 
     RLP.List [] `encodesTo` "\xc0"
 
-    RLP.String (RLP.encodeInt 15) `encodesTo` "\x0f"
+    "\x0f" {-15-} `encodesTo` "\x0f"
 
-    RLP.String (RLP.encodeInt 1024) `encodesTo` "\x82\x04\x00"
+    "\x04\x00" {-1024-} `encodesTo` "\x82\x04\x00"
 
     -- [ [], [[]], [ [], [[]] ] ]
     (RLP.List [ (RLP.List [])

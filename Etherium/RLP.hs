@@ -5,7 +5,6 @@ import Data.ByteString (ByteString)
 import Data.Monoid
 import Data.Functor
 import Data.Word(Word8)
-import Data.String(IsString, fromString)
 import Data.Attoparsec.ByteString as ABS
 import Data.Bits
 
@@ -13,9 +12,6 @@ data Item = String ByteString
           | List [Item]
           deriving (Eq, Show)
 
-instance IsString Item where
-  fromString = String . fromString
-          
 encode :: Item -> ByteString
 encode x = case x of
   String bytes  -> encodeLength 0x80 bytes
