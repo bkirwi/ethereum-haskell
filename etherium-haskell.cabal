@@ -53,6 +53,8 @@ test-suite test
                , hspec
                , etherium-haskell
                , bytestring
+               , containers
+               , mtl
                , QuickCheck
 
 
@@ -60,6 +62,7 @@ library
   -- Modules exported by the library.
   exposed-modules: Etherium.RLP
                  , Etherium.RLP.Convert   
+                 , Etherium.Patricia
   
   -- Modules included in this library but not exported.
   -- other-modules:       
@@ -72,6 +75,8 @@ library
                      , bytestring
                      , containers
                      , attoparsec
+                     , cryptohash
+                     , mtl
         
         -- Directories containing source files.
   -- hs-source-dirs:      
