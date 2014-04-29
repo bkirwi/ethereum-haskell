@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Etherium.PatriciaSpec(spec) where
+module Etherium.TrieSpec(spec) where
 
 import Control.Monad.State
 import qualified Data.Map as Map
 import Data.Map(Map)
 
-import Etherium.Patricia as P
+import Etherium.Trie as P
 
 import Test.Hspec
 import Test.QuickCheck

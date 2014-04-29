@@ -62,7 +62,8 @@ library
   -- Modules exported by the library.
   exposed-modules: Etherium.RLP
                  , Etherium.RLP.Convert   
-                 , Etherium.Patricia
+                 , Etherium.Trie.Path
+                 , Etherium.Trie
   
   -- Modules included in this library but not exported.
   -- other-modules:       
