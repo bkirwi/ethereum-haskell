@@ -2,19 +2,47 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Etherium.Patricia() where
 
-import Prelude hiding (lookup)
 import Crypto.Hash.SHA3 as SHA3
+import Control.Error
 import Control.Monad.State
+import Data.Bits
 import qualified Data.ByteString as BS
 import Data.ByteString(ByteString)
 import Data.Functor
 import qualified Data.Map as Map
 import Data.Map(Map)
+import Data.Monoid
+import Data.Word(Word8)
 
 import qualified Etherium.RLP as RLP
 import Etherium.RLP.Convert
 
 newtype Path = Path [Word8]
+
+encodePath :: Bool -> Path -> ByteString
+encodePath isTerminal (Path path) = 
+  let pack a b = (a `shift` 4) .|. b
+      pair a (Nothing, xs) = (Just a, xs)
+      pair a (Just b, xs)  = (Nothing, a `pack` b : xs)
+      (odd, body) = foldr pair (Nothing, []) path
+      terminalFlag = if isTerminal then 0x20 else 0
+      oddFlag = case odd of
+        Nothing -> 0
+        Just b -> 0x10 .|. b
+      firstByte = terminalFlag .|. oddFlag
+  in BS.singleton firstByte <> BS.pack body
+
+decodePath :: ByteString -> Maybe (Bool, Path)
+decodePath = fmap decodePair . BS.uncons
+  where 
+    decodePair (firstByte, body) =
+      let isTerminal = (firstByte .&. 0x20) == 0x20
+          unpackByte a = [a `shiftR` 4, a .&. 0x0f]
+          bodyPath = BS.unpack body >>= unpackByte
+          path = case (firstByte .&. 0x10) of
+            0x10 -> (firstByte .&. 0x0f) : bodyPath
+            _ -> bodyPath
+      in (isTerminal, Path path)
 
 newtype Digest = Digest ByteString
   deriving (Ord, Show, Eq, AsRLP)
