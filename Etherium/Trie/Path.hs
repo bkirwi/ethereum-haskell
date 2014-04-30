@@ -10,6 +10,7 @@ import Data.Monoid
 import Data.Word(Word8)
 
 newtype Path = Path [Word8]
+  deriving (Eq, Show)
 
 packByte :: Word8 -> Word8 -> Word8
 packByte a b = (a `shift` 4) .|. b
