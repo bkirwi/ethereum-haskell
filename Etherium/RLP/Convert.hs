@@ -17,10 +17,6 @@ instance AsRLP Item where
   fromRLP = Just
   toRLP = id
 
-instance AsRLP Int where
-  fromRLP = fmap decodeInt . fromString
-  toRLP = String . encodeInt
-
 instance AsRLP ByteString where
   fromRLP = fromString
   toRLP = String
