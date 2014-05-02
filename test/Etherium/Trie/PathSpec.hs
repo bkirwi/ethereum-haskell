@@ -11,17 +11,20 @@ import Etherium.Trie.Path
 import Test.Hspec
 import Test.QuickCheck
 
-instance Arbitrary Path where
-  arbitrary = toPath <$> arbitrary
+instance Arbitrary Word4 where
+  arbitrary = fstWord4 <$> arbitrary
 
 instance Arbitrary ByteString where 
-  arbitrary = do
-    BS.pack <$> listOf arbitrary
-  shrink bytes =
-    BS.pack <$> (shrink . BS.unpack $ bytes) 
-
+  arbitrary = BS.pack <$> listOf arbitrary
+  shrink = fmap BS.pack . shrink . BS.unpack
 
 spec :: Spec
 spec = do
-  it "should roundtrip paths correctly" $ property $ \x y ->
+  it "should roundtrip paths" $ property $ \x y ->
     (decodePath $ encodePath x y) `shouldBe` Just (x, y) 
+
+  it "should recover the first nibble" $ property $ \x y ->
+    (fstWord4 $ x `packByte` y) `shouldBe` x
+
+  it "should recover the second nibble" $ property $ \x y ->
+    (sndWord4 $ x `packByte` y) `shouldBe` y
