@@ -24,11 +24,13 @@ newtype Digest = Digest ByteString
   deriving (Ord, Show, Eq, AsRLP)
 
 data Ref = Hash Digest | Literal Node
+  deriving (Show, Eq)
 
 data Node = Empty
           | Value Path ByteString
           | Subnode Path Ref
           | Node [Ref] ByteString
+  deriving (Show, Eq)
 
 instance AsRLP Ref where
   toRLP (Hash h) = toRLP h

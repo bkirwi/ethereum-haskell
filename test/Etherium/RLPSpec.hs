@@ -13,15 +13,10 @@ import qualified Etherium.RLP as RLP
 import Test.Hspec
 import Test.QuickCheck
 import Data.String(IsString, fromString)
+import Etherium.QuickCheck
 
 instance IsString RLP.Item where
   fromString = RLP.String . fromString
-
-instance Arbitrary ByteString where 
-  arbitrary = do
-    BS.pack <$> listOf arbitrary
-  shrink bytes =
-    BS.pack <$> (shrink . BS.unpack $ bytes) 
 
 instance Arbitrary RLP.Item where
   arbitrary = sized $ \n -> 
