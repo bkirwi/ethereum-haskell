@@ -1,7 +1,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Etherium.Trie() where
+module Etherium.Trie(DB(..), Digest, lookup, lookupPath, Ref(..), Node(..)) where
 
+import Prelude hiding (lookup)
 import qualified Crypto.Hash.SHA3 as SHA3
 import Control.Error
 import Control.Monad.State
@@ -9,6 +10,7 @@ import Data.Bits
 import qualified Data.ByteString as BS
 import Data.ByteString(ByteString)
 import Data.Functor
+import Data.Maybe
 import qualified Data.Map as Map
 import Data.Map(Map)
 import Data.Monoid
@@ -61,3 +63,34 @@ instance AsRLP Node where
       val <- fromRLP $ last many
       return $ Node refs val
     | otherwise = Nothing
+
+class (Functor m, Monad m) => DB m where
+  getDB :: Digest -> m Node
+  putDB :: Digest -> Node -> m ()
+
+lookupPath :: DB m => Ref -> Path -> m ByteString
+lookupPath root path = getRef root >>= getVal
+  where
+    getRef (Hash d) = getDB d
+    getRef (Literal n) = return n
+    getVal Empty = return BS.empty
+    getVal (Value nodePath val) = 
+      return $ case matchPath path nodePath of
+        Just [] -> val
+        _ -> BS.empty
+    getVal (Subnode nodePath ref) =
+      case matchPath path nodePath of
+        Nothing -> return BS.empty
+        Just remaining -> lookupPath ref remaining
+    getVal (Node refs val) = case path of
+      [] -> return val
+      (w:rest) -> lookupPath (refs !! asInt w) rest
+    matchPath :: Path -> Path -> Maybe Path
+    matchPath path [] = Just path 
+    matchPath [] _ = Nothing
+    matchPath (pw : path) (nw : nodePath)
+      | pw == nw = matchPath path nodePath
+      | otherwise = Nothing
+
+lookup :: DB m => Ref -> ByteString -> m ByteString
+lookup ref bs = lookupPath ref $ toPath bs

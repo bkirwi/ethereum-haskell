@@ -10,13 +10,7 @@ import Etherium.Trie.Path
 
 import Test.Hspec
 import Test.QuickCheck
-
-instance Arbitrary Word4 where
-  arbitrary = fstWord4 <$> arbitrary
-
-instance Arbitrary ByteString where 
-  arbitrary = BS.pack <$> listOf arbitrary
-  shrink = fmap BS.pack . shrink . BS.unpack
+import Etherium.QuickCheck
 
 spec :: Spec
 spec = do
