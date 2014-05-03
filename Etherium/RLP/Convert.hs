@@ -1,4 +1,4 @@
-module Etherium.RLP.Convert(AsRLP, toRLP, fromRLP, fromList, fromString) where
+module Etherium.RLP.Convert(AsRLP, toRLP, fromRLP) where
 
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
@@ -18,13 +18,12 @@ instance AsRLP Item where
   toRLP = id
 
 instance AsRLP ByteString where
-  fromRLP = fromString
+  fromRLP (String bs) = Just bs
+  fromRLP (List _) = Nothing
   toRLP = String
 
-fromList :: Item -> Maybe [Item]
-fromList (List items) = Just items
-fromList (String _) = Nothing
+instance AsRLP a => AsRLP [a] where
+  fromRLP (List list) = mapM fromRLP list
+  fromRLP (String _) = Nothing
+  toRLP = List . map toRLP
 
-fromString :: Item -> Maybe ByteString
-fromString (String bytes) = Just bytes
-fromString (List _) = Nothing

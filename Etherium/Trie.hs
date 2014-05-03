@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Etherium.Trie() where
 
-import Crypto.Hash.SHA3 as SHA3
+import qualified Crypto.Hash.SHA3 as SHA3
 import Control.Error
 import Control.Monad.State
 import Data.Bits
@@ -25,21 +25,39 @@ data Ref = Hash Digest | Literal Node
 
 data Node = Empty
           | Value Path ByteString
-          | Subnode Path Node
+          | Subnode Path Ref
           | Node [Ref] ByteString
 
 instance AsRLP Ref where
   toRLP (Hash h) = toRLP h
   toRLP (Literal l) = toRLP l
   fromRLP rlp = do
-    bytes <- fromString rlp
+    bytes <- fromRLP rlp
     if BS.length bytes < 32 
-      then case RLP.decode bytes of
-        Left err -> Nothing
-        Right decoded -> fromRLP decoded
+      then (hush $ RLP.decode bytes) >>= fromRLP
       else return . Hash . Digest $ bytes
 
 instance AsRLP Node where
-  toRLP Empty = RLP.String BS.empty
-  toRLP _ = undefined
-  fromRLP _ = undefined
+  toRLP Empty = toRLP BS.empty
+  toRLP (Value path val) = toRLP [encodePath True path, val]
+  toRLP (Subnode path ref) = toRLP [toRLP $ encodePath False path, toRLP ref]
+  toRLP (Node refs val) = toRLP (map toRLP refs <> [toRLP val])
+  fromRLP (RLP.String bs)
+    | BS.null bs = Just Empty
+    | otherwise = Nothing
+  fromRLP (RLP.List [pathItem, targetItem]) = do
+    pathBS <- fromRLP pathItem
+    (isTerminal, path) <- decodePath pathBS
+    if isTerminal 
+      then do
+        val <- fromRLP targetItem
+        return $ Value path val 
+      else do
+        ref <- fromRLP targetItem 
+        return $ Subnode path ref
+  fromRLP (RLP.List many)
+    | length many == 17 = do
+      refs <- mapM fromRLP $ init many 
+      val <- fromRLP $ last many
+      return $ Node refs val
+    | otherwise = Nothing
