@@ -10,6 +10,7 @@ import Data.Functor
 import Data.List(isPrefixOf)
 
 import Etherium.Trie as P
+import Etherium.Trie.Path(asInt)
 
 import Test.Hspec
 import Test.QuickCheck
@@ -102,4 +103,28 @@ spec = do
                 ref <- putNode $ Subnode nodePath sub
                 lookupPath ref path
           in result `shouldBe` ""
+
+    describe "Node" $ do
+      it "should get the value with an empty path" $ property $ \root ->
+        runDB $ do
+          ref <- root
+          node <- getNode ref
+          case node of
+            Node refs val -> do
+              result <- lookupPath ref []
+              return $ result `shouldBe` val
+            _ -> discard
+
+      it "should follow the path to descendants" $ property $ \root pHead pTail->
+        runDB $ do
+          ref <- root
+          node <- getNode ref
+          case node of
+            Node refs _ -> do
+              let path = pHead : pTail
+                  next = refs !! asInt pHead
+              val <- lookupPath next pTail
+              result <- lookupPath ref path
+              return $ result `shouldBe` val
+            _ -> discard
 
