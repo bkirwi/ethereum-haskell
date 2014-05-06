@@ -7,6 +7,7 @@ import qualified Data.Map as Map
 import Data.Map(Map)
 import Data.Maybe
 import Data.Functor
+import Data.List(isPrefixOf)
 
 import Etherium.Trie as P
 
@@ -17,29 +18,88 @@ import Etherium.QuickCheck
 newtype MapDB = MapDB { getMap :: Map Digest Node }
   deriving (Show, Eq)
 
+emptyMap = MapDB { getMap = Map.empty }
+
 instance DB (State MapDB) where
   getDB key = getNode <$> getMap <$> get
     where getNode map = fromMaybe Empty $ Map.lookup key map
-  putDB key value = undefined
+  putDB key value = do
+    map <- get
+    put $ MapDB { getMap = Map.insert key value $ getMap map }
 
-instance Arbitrary MapDB where
-  arbitrary = return $ MapDB { getMap = Map.empty }
+instance Arbitrary (State MapDB Ref) where
+  arbitrary = sized anynode
+    where
+      anynode size 
+        | size <= 1 = empty
+        | otherwise = oneof [empty, value, subnode, node] 
+        where
+          empty, value, subnode, node :: Gen (State MapDB Ref)
+          empty = return $ putNode Empty
+          value = do
+            path <- arbitrary
+            value <- arbitrary
+            return $ putNode $ Value path value
+          subnode = do
+            path <- arbitrary
+            refM <- anynode (size - 1)
+            return $ do
+              ref <- refM 
+              putNode $ Subnode path ref
+          node = do
+            refsM <- sequence $ replicate 16 $ anynode (size `div` 16)
+            value <- arbitrary
+            return $ do
+              refs <- sequence $ refsM
+              putNode $ Node refs value
 
-runDB ::  MapDB -> (State MapDB a) -> (a, MapDB)
-runDB = flip runState
+instance Show (State MapDB Ref) where
+  show x = show $ runState x emptyMap
+
+runDB :: (State MapDB a) -> a
+runDB x = fst $ runState x emptyMap
 
 spec :: Spec
 spec = do
   describe "Node-specific cases" $ do
-    it "Empty: should always return an empty string" $ property $ \db path ->
-      let (result, _) = runDB db $ lookupPath (Literal Empty) path
-      in result `shouldBe` ""
     
-    it "Value: should retrieve the value with same path" $ property $ \db path val ->
-      let (result, _) = runDB db $ lookupPath (Literal $ Value path val) path
-      in result `shouldBe` val
-      
-    it "Value: should retrieve default when paths differ" $ property $ \db path nodePath val ->
-      path /= nodePath ==>
-        let (result, _) = runDB db $ lookupPath (Literal $ Value nodePath val) path
+    describe "Empty" $ do
+      it "should always return an empty string" $ property $ \path ->
+        let result = runDB $ do
+              ref <- putNode Empty
+              lookupPath ref path
         in result `shouldBe` ""
+    
+    describe "Value" $ do
+      it "should retrieve the value with same path" $ property $ \path val ->
+        let result = runDB $ do
+              ref <- putNode $ Value path val
+              lookupPath ref path
+        in result `shouldBe` val
+        
+      it "should retrieve default when paths differ" $ property $ \path nodePath val ->
+        path /= nodePath ==>
+          let result = runDB $ do
+                ref <- putNode $ Value nodePath val
+                lookupPath ref path
+          in result `shouldBe` ""
+
+    describe "Subnode" $ do
+      it "should follow the path to the targeted node" $ property $ \root initPath subpath ->
+        let expected = runDB $ do
+              ref <- root
+              lookupPath ref subpath
+            result = runDB $ do
+              sub <- root
+              ref <- putNode $ Subnode initPath sub 
+              lookupPath ref (initPath ++ subpath)
+        in result `shouldBe` expected
+
+      it "should return nothing when paths conflict" $ property $ \root path nodePath ->
+        not (nodePath `isPrefixOf` path) ==>
+          let result = runDB $ do
+                sub <- root
+                ref <- putNode $ Subnode nodePath sub
+                lookupPath ref path
+          in result `shouldBe` ""
+

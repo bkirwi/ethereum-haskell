@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Etherium.Trie(DB(..), Digest, lookup, lookupPath, Ref(..), Node(..)) where
+module Etherium.Trie(DB(..), Digest, getNode, putNode, lookup, lookupPath, Ref(..), Node(..)) where
 
 import Prelude hiding (lookup)
 import qualified Crypto.Hash.SHA3 as SHA3
@@ -70,11 +70,23 @@ class (Functor m, Monad m) => DB m where
   getDB :: Digest -> m Node
   putDB :: Digest -> Node -> m ()
 
+putNode :: DB m => Node -> m Ref
+putNode node =
+  let bytes = RLP.encode $ toRLP node
+      digest = Digest $ SHA3.hash 256 bytes
+  in if BS.length bytes < 32
+    then return $ Literal node
+    else do
+      putDB digest node 
+      return $ Hash digest
+
+getNode :: DB m => Ref -> m Node
+getNode (Hash d) = getDB d
+getNode (Literal n) = return n
+            
 lookupPath :: DB m => Ref -> Path -> m ByteString
-lookupPath root path = getRef root >>= getVal
+lookupPath root path = getNode root >>= getVal
   where
-    getRef (Hash d) = getDB d
-    getRef (Literal n) = return n
     getVal Empty = return BS.empty
     getVal (Value nodePath val) = 
       return $ case matchPath path nodePath of

@@ -16,6 +16,9 @@ import Data.String(IsString, fromString)
 
 instance Arbitrary Word4 where
   arbitrary = fstWord4 <$> arbitrary
+  shrink word4 = do
+    shrunk <- shrink $ asInt word4
+    return $ sndWord4 $ fromIntegral shrunk
 
 instance Arbitrary ByteString where 
   arbitrary = BS.pack <$> listOf arbitrary
