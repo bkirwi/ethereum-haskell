@@ -54,7 +54,7 @@ instance Arbitrary (State MapDB Ref) where
             value <- arbitrary
             return $ do
               refs <- sequence $ refsM
-              putNode $ Node (Seq.fromList refs) value
+              putNode $ Full (Seq.fromList refs) value
 
 instance Show (State MapDB Ref) where
   show x = show $ runState x emptyMap
@@ -106,13 +106,13 @@ spec = do
                 lookupPath ref path
           in result `shouldBe` ""
 
-    describe "Node" $ do
+    describe "Full" $ do
       it "should get the value with an empty path" $ property $ \root ->
         runDB $ do
           ref <- root
           node <- getNode ref
           case node of
-            Node refs val -> do
+            Full refs val -> do
               result <- lookupPath ref []
               return $ result `shouldBe` val
             _ -> discard
@@ -122,7 +122,7 @@ spec = do
           ref <- root
           node <- getNode ref
           case node of
-            Node refs _ -> do
+            Full refs _ -> do
               let path = pHead : pTail
                   next = refs `Seq.index` asInt pHead
               val <- lookupPath next pTail
