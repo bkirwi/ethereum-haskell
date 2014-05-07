@@ -10,6 +10,7 @@ import Data.Bits
 import qualified Data.ByteString as BS
 import Data.ByteString(ByteString)
 import Data.Functor
+import Data.List(stripPrefix)
 import Data.Maybe
 import qualified Data.Map as Map
 import Data.Map(Map)
@@ -91,22 +92,16 @@ lookupPath root path = getNode root >>= getVal
   where
     getVal Empty = return BS.empty
     getVal (Value nodePath val) = 
-      return $ case matchPath path nodePath of
+      return $ case stripPrefix nodePath path of
         Just [] -> val
         _ -> BS.empty
     getVal (Subnode nodePath ref) =
-      case matchPath path nodePath of
+      case stripPrefix nodePath path of
         Nothing -> return BS.empty
         Just remaining -> lookupPath ref remaining
     getVal (Node refs val) = case path of
       [] -> return val
       (w:rest) -> lookupPath (refs `Seq.index` asInt w) rest
-    matchPath :: Path -> Path -> Maybe Path
-    matchPath path [] = Just path 
-    matchPath [] _ = Nothing
-    matchPath (pw : path) (nw : nodePath)
-      | pw == nw = matchPath path nodePath
-      | otherwise = Nothing
 
 lookup :: DB m => Ref -> ByteString -> m ByteString
 lookup ref bs = lookupPath ref $ toPath bs
