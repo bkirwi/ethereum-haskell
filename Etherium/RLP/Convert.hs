@@ -6,6 +6,8 @@ import Data.Char(ord)
 import Data.Word(Word8)
 import Data.Monoid
 import Data.Functor
+import qualified Data.Sequence as Seq
+import Data.Foldable(toList)
 
 import Etherium.RLP
 
@@ -27,3 +29,6 @@ instance AsRLP a => AsRLP [a] where
   fromRLP (String _) = Nothing
   toRLP = List . map toRLP
 
+instance AsRLP a => AsRLP (Seq.Seq a) where
+  fromRLP item = Seq.fromList <$> fromRLP item
+  toRLP = toRLP . toList

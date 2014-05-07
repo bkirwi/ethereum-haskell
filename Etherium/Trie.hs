@@ -15,6 +15,8 @@ import qualified Data.Map as Map
 import Data.Map(Map)
 import Data.Monoid
 import Data.Word(Word8)
+import qualified Data.Sequence as Seq
+import Data.Sequence(Seq)
 
 import qualified Etherium.RLP as RLP
 import Etherium.RLP.Convert
@@ -29,7 +31,7 @@ data Ref = Hash Digest | Literal Node
 data Node = Empty
           | Value Path ByteString
           | Subnode Path Ref
-          | Node [Ref] ByteString
+          | Node (Seq Ref) ByteString
   deriving (Show, Eq)
 
 instance AsRLP Ref where
@@ -45,7 +47,7 @@ instance AsRLP Node where
   toRLP Empty = toRLP BS.empty
   toRLP (Value path val) = toRLP [encodePath True path, val]
   toRLP (Subnode path ref) = toRLP [toRLP $ encodePath False path, toRLP ref]
-  toRLP (Node refs val) = toRLP (map toRLP refs <> [toRLP val])
+  toRLP (Node refs val) = toRLP (fmap toRLP refs <> Seq.singleton (toRLP val))
   fromRLP (RLP.String bs)
     | BS.null bs = Just Empty
     | otherwise = Nothing
@@ -63,7 +65,7 @@ instance AsRLP Node where
     | length many == 17 = do
       refs <- mapM fromRLP $ init many 
       val <- fromRLP $ last many
-      return $ Node refs val
+      return $ Node (Seq.fromList refs) val
     | otherwise = Nothing
 
 class (Functor m, Monad m) => DB m where
@@ -98,7 +100,7 @@ lookupPath root path = getNode root >>= getVal
         Just remaining -> lookupPath ref remaining
     getVal (Node refs val) = case path of
       [] -> return val
-      (w:rest) -> lookupPath (refs !! asInt w) rest
+      (w:rest) -> lookupPath (refs `Seq.index` asInt w) rest
     matchPath :: Path -> Path -> Maybe Path
     matchPath path [] = Just path 
     matchPath [] _ = Nothing

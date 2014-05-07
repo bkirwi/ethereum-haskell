@@ -8,6 +8,8 @@ import Data.Map(Map)
 import Data.Maybe
 import Data.Functor
 import Data.List(isPrefixOf)
+import qualified Data.Sequence as Seq
+import Data.Sequence(Seq)
 
 import Etherium.Trie as P
 import Etherium.Trie.Path(asInt)
@@ -52,7 +54,7 @@ instance Arbitrary (State MapDB Ref) where
             value <- arbitrary
             return $ do
               refs <- sequence $ refsM
-              putNode $ Node refs value
+              putNode $ Node (Seq.fromList refs) value
 
 instance Show (State MapDB Ref) where
   show x = show $ runState x emptyMap
@@ -122,7 +124,7 @@ spec = do
           case node of
             Node refs _ -> do
               let path = pHead : pTail
-                  next = refs !! asInt pHead
+                  next = refs `Seq.index` asInt pHead
               val <- lookupPath next pTail
               result <- lookupPath ref path
               return $ result `shouldBe` val
