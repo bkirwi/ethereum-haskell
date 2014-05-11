@@ -31,26 +31,26 @@ instance DB (State MapDB) where
     put $ MapDB { getMap = Map.insert key value $ getMap map }
 
 instance Arbitrary (State MapDB Ref) where
-  arbitrary = sized anynode
+  arbitrary = sized anyNode
     where
-      anynode size 
+      anyNode size
         | size <= 1 = empty
-        | otherwise = oneof [empty, value, subnode, node] 
+        | otherwise = oneof [empty, shortcutVal, shortcutRef, node]
         where
-          empty, value, subnode, node :: Gen (State MapDB Ref)
+          empty, shortcutVal, shortcutRef, node :: Gen (State MapDB Ref)
           empty = return $ putNode Empty
-          value = do
+          shortcutVal = do
             path <- arbitrary
             value <- arbitrary
-            return $ putNode $ Value path value
-          subnode = do
+            return $ putNode $ Shortcut path $ Right value
+          shortcutRef = do
             path <- arbitrary
-            refM <- anynode (size - 1)
+            refM <- anyNode (size - 1)
             return $ do
               ref <- refM 
-              putNode $ Subnode path ref
+              putNode $ Shortcut path $ Left ref
           node = do
-            refsM <- sequence $ replicate 16 $ anynode (size `div` 16)
+            refsM <- sequence $ replicate 16 $ anyNode (size `div` 16)
             value <- arbitrary
             return $ do
               refs <- sequence $ refsM
@@ -73,28 +73,27 @@ spec = do
               lookupPath ref path
         in result `shouldBe` ""
     
-    describe "Value" $ do
+    describe "Shortcut" $ do
       it "should retrieve the value with same path" $ property $ \path val ->
         let result = runDB $ do
-              ref <- putNode $ Value path val
+              ref <- putNode $ Shortcut path $ Right val
               lookupPath ref path
         in result `shouldBe` val
         
       it "should retrieve default when paths differ" $ property $ \path nodePath val ->
         path /= nodePath ==>
           let result = runDB $ do
-                ref <- putNode $ Value nodePath val
+                ref <- putNode $ Shortcut nodePath $ Right val
                 lookupPath ref path
           in result `shouldBe` ""
 
-    describe "Subnode" $ do
       it "should follow the path to the targeted node" $ property $ \root initPath subpath ->
         let expected = runDB $ do
               ref <- root
               lookupPath ref subpath
             result = runDB $ do
               sub <- root
-              ref <- putNode $ Subnode initPath sub 
+              ref <- putNode $ Shortcut initPath $ Left sub 
               lookupPath ref (initPath ++ subpath)
         in result `shouldBe` expected
 
@@ -102,7 +101,7 @@ spec = do
         not (nodePath `isPrefixOf` path) ==>
           let result = runDB $ do
                 sub <- root
-                ref <- putNode $ Subnode nodePath sub
+                ref <- putNode $ Shortcut nodePath $ Left sub
                 lookupPath ref path
           in result `shouldBe` ""
 

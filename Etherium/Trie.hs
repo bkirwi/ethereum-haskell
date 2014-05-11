@@ -30,8 +30,7 @@ data Ref = Hash Digest | Literal Node
   deriving (Show, Eq)
 
 data Node = Empty
-          | Value Path ByteString
-          | Subnode Path Ref
+          | Shortcut Path (Either Ref ByteString)
           | Full (Seq Ref) ByteString
   deriving (Show, Eq)
 
@@ -46,8 +45,8 @@ instance AsRLP Ref where
 
 instance AsRLP Node where
   toRLP Empty = toRLP BS.empty
-  toRLP (Value path val) = toRLP [encodePath True path, val]
-  toRLP (Subnode path ref) = toRLP [toRLP $ encodePath False path, toRLP ref]
+  toRLP (Shortcut path (Right val)) = toRLP [encodePath True path, val]
+  toRLP (Shortcut path (Left ref)) = toRLP [toRLP $ encodePath False path, toRLP ref]
   toRLP (Full refs val) = toRLP (fmap toRLP refs <> Seq.singleton (toRLP val))
   fromRLP (RLP.String bs)
     | BS.null bs = Just Empty
@@ -55,13 +54,10 @@ instance AsRLP Node where
   fromRLP (RLP.List [pathItem, targetItem]) = do
     pathBS <- fromRLP pathItem
     (isTerminal, path) <- decodePath pathBS
-    if isTerminal 
-      then do
-        val <- fromRLP targetItem
-        return $ Value path val 
-      else do
-        ref <- fromRLP targetItem 
-        return $ Subnode path ref
+    target <-
+      if isTerminal then Right <$> fromRLP targetItem 
+      else Left <$> fromRLP targetItem
+    return $ Shortcut path target 
   fromRLP (RLP.List many)
     | length many == 17 = do
       refs <- mapM fromRLP $ init many 
@@ -91,11 +87,11 @@ lookupPath :: DB m => Ref -> Path -> m ByteString
 lookupPath root path = getNode root >>= getVal
   where
     getVal Empty = return BS.empty
-    getVal (Value nodePath val) = 
+    getVal (Shortcut nodePath (Right val)) = 
       return $ case stripPrefix nodePath path of
         Just [] -> val
         _ -> BS.empty
-    getVal (Subnode nodePath ref) =
+    getVal (Shortcut nodePath (Left ref)) =
       case stripPrefix nodePath path of
         Nothing -> return BS.empty
         Just remaining -> lookupPath ref remaining
