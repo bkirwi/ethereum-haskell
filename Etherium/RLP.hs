@@ -44,7 +44,7 @@ parseItem :: Parser (Int, Item)
 parseItem = do 
   first <- anyWord8
   let typeBits = 0xc0 .&. first
-      parseString, parseList :: Int => Parser Item
+      parseString, parseList :: Int -> Parser Item
       parseString n = String <$> ABS.take n
       parseList 0 = return $ List []
       parseList n = do
@@ -67,5 +67,5 @@ parseItem = do
     0xc0 -> withSize 0xc0 parseList
     otherwise -> return (1, String $ BS.singleton first)
 
-decode :: ByteString => Either String Item
+decode :: ByteString -> Either String Item
 decode = parseOnly (snd <$> parseItem)
