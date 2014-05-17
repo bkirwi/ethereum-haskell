@@ -114,8 +114,42 @@ emptyRef = Literal Empty
 
 insertPath :: DB m => Node -> Path -> ByteString -> m Node
 insertPath Empty path bs = return $ Shortcut path $ Right bs
--- FIXME
-insertPath (Shortcut nPath nVal) path bs = return $ Shortcut path $ Right bs 
+insertPath (Shortcut nPath nVal) path bs =
+  case (splitPrefix nPath path, nVal) of
+    ((prefix, [], []), Right _) -> return $ Shortcut prefix $ Right bs
+    ((prefix, [], suffix), Left ref) -> do
+      node <- getNode ref
+      inserted <- insertPath node suffix bs
+      nRef <- putNode inserted
+      return $ Shortcut prefix $ Left nRef 
+    (([], nSuffix, suffix), _) -> combine nSuffix suffix
+    ((prefix, nSuffix, suffix), _) -> do
+      combined <- combine nSuffix suffix
+      ref <- putNode combined
+      return $ Shortcut prefix $ Left ref
+  where
+    splitPrefix [] b = ([], [], b)  
+    splitPrefix a [] = ([], a, [])  
+    splitPrefix (a:as) (b:bs)
+      | a == b =
+        let (prefix, aSuffix, bSuffix) = splitPrefix as bs
+        in (a:prefix, aSuffix, bSuffix)
+      | otherwise = ([], a:as, b:bs)
+    combine [] (p:ps) = do
+      newRef <- putNode $ Shortcut ps $ Right bs 
+      let newRefs = Seq.update (asInt p) newRef emptyRefs 
+      return $ Full newRefs $ fromRight nVal
+    combine (p:ps) [] = do
+      newRef <- putNode $ Shortcut ps $ nVal 
+      let newRefs = Seq.update (asInt p) newRef emptyRefs 
+      return $ Full newRefs bs
+    combine (p:ps) (q:qs) = do
+      pRef <- putNode $ Shortcut ps $ nVal 
+      qRef <- putNode $ Shortcut qs $ Right bs 
+      let pRefs = Seq.update (asInt p) pRef emptyRefs 
+          qRefs = Seq.update (asInt q) qRef pRefs
+      return $ Full qRefs BS.empty
+    fromRight (Right x) = x
 insertPath (Full refs val) [] bs = return $ Full refs bs 
 insertPath (Full refs val) (p:ps) bs = do
   let index = asInt p

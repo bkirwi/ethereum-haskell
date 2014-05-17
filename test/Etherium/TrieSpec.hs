@@ -137,3 +137,10 @@ spec = do
         got <- lookup root key
         return $ got `shouldBe` value
 
+    it "preserves writes to different keys" $ property $ \key0 value0 key1 value1 ->
+      key0 /= key1 ==> runDB $ do
+        root0 <- insert emptyRef key0 value0
+        root1 <- insert root0 key1 value1
+        got <- lookup root1 key0
+        return $ got `shouldBe` value0
+
