@@ -131,15 +131,17 @@ spec = do
             _ -> discard
 
   describe "Externally-visible properties" $ do
-    it "should read its writes" $ property $ \key value ->
+    it "should read its writes" $ property $ \root key value ->
       runDB $ do
-        root <- insert emptyRef key value
-        got <- lookup root key
+        ref <- root
+        ref0 <- insert ref key value
+        got <- lookup ref0 key
         return $ got `shouldBe` value
 
-    it "preserves writes to different keys" $ property $ \key0 value0 key1 value1 ->
+    it "preserves writes to different keys" $ property $ \root key0 value0 key1 value1 ->
       key0 /= key1 ==> runDB $ do
-        root0 <- insert emptyRef key0 value0
+        ref <- root
+        root0 <- insert ref key0 value0
         root1 <- insert root0 key1 value1
         got <- lookup root1 key0
         return $ got `shouldBe` value0

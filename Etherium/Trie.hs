@@ -47,7 +47,7 @@ instance AsRLP Ref where
   fromRLP rlp = do
     bytes <- fromRLP rlp
     if BS.length bytes < 32 
-      then (hush $ RLP.decode bytes) >>= fromRLP
+      then hush (RLP.decode bytes) >>= fromRLP
       else return . Hash . Digest $ bytes
 
 instance AsRLP Node where
@@ -65,12 +65,11 @@ instance AsRLP Node where
       if isTerminal then Right <$> fromRLP targetItem 
       else Left <$> fromRLP targetItem
     return $ Shortcut path target 
-  fromRLP (RLP.List many)
-    | length many == 17 = do
-      refs <- mapM fromRLP $ init many 
-      val <- fromRLP $ last many
-      return $ Full (Seq.fromList refs) val
-    | otherwise = Nothing
+  fromRLP (RLP.List many) = do
+    guard $ length many == 17 
+    refs <- mapM fromRLP $ init many 
+    val <- fromRLP $ last many
+    return $ Full (Seq.fromList refs) val
 
 class (Functor m, Monad m) => DB m where
   getDB :: Digest -> m Node
@@ -140,11 +139,11 @@ insertPath (Shortcut nPath nVal) path bs =
       let newRefs = Seq.update (asInt p) newRef emptyRefs 
       return $ Full newRefs $ fromRight nVal
     combine (p:ps) [] = do
-      newRef <- putNode $ Shortcut ps $ nVal 
+      newRef <- putNode $ Shortcut ps nVal 
       let newRefs = Seq.update (asInt p) newRef emptyRefs 
       return $ Full newRefs bs
     combine (p:ps) (q:qs) = do
-      pRef <- putNode $ Shortcut ps $ nVal 
+      pRef <- putNode $ Shortcut ps nVal 
       qRef <- putNode $ Shortcut qs $ Right bs 
       let pRefs = Seq.update (asInt p) pRef emptyRefs 
           qRefs = Seq.update (asInt q) qRef pRefs
@@ -153,7 +152,7 @@ insertPath (Shortcut nPath nVal) path bs =
 insertPath (Full refs val) [] bs = return $ Full refs bs 
 insertPath (Full refs val) (p:ps) bs = do
   let index = asInt p
-      ref = (refs `Seq.index` index)
+      ref = refs `Seq.index` index
   newRef <- insertRef ref ps bs
   let newRefs = Seq.update index newRef refs
   return $ Full newRefs val
