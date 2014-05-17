@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Etherium.TrieSpec(spec) where
 
+import Prelude hiding (lookup)
 import Control.Monad.State
 import qualified Data.Map as Map
 import Data.Map(Map)
@@ -128,4 +129,11 @@ spec = do
               result <- lookupPath ref path
               return $ result `shouldBe` val
             _ -> discard
+
+  describe "Externally-visible properties" $ do
+    it "should read its writes" $ property $ \key value ->
+      runDB $ do
+        root <- insert emptyRef key value
+        got <- lookup root key
+        return $ got `shouldBe` value
 

@@ -1,6 +1,13 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Etherium.Trie(DB(..), Digest, getNode, putNode, lookup, lookupPath, Ref(..), Node(..)) where
+module Etherium.Trie
+  ( DB(..), Digest
+  , getNode, putNode
+  , lookup, lookupPath
+  , insert, insertPath
+  , emptyRef
+  , Ref(..), Node(..)
+  ) where
 
 import Prelude hiding (lookup)
 import qualified Crypto.Hash.SHA3 as SHA3
@@ -101,3 +108,27 @@ lookupPath root path = getNode root >>= getVal
 
 lookup :: DB m => Ref -> ByteString -> m ByteString
 lookup ref bs = lookupPath ref $ toPath bs
+
+emptyRefs = Seq.replicate 16 $ Literal Empty
+emptyRef = Literal Empty
+
+insertPath :: DB m => Node -> Path -> ByteString -> m Node
+insertPath Empty path bs = return $ Shortcut path $ Right bs
+-- FIXME
+insertPath (Shortcut nPath nVal) path bs = return $ Shortcut path $ Right bs 
+insertPath (Full refs val) [] bs = return $ Full refs bs 
+insertPath (Full refs val) (p:ps) bs = do
+  let index = asInt p
+      ref = (refs `Seq.index` index)
+  newRef <- insertRef ref ps bs
+  let newRefs = Seq.update index newRef refs
+  return $ Full newRefs val
+  
+insertRef :: DB m => Ref -> Path -> ByteString -> m Ref
+insertRef ref path bs = do
+  node <- getNode ref
+  newNode <- insertPath node path bs
+  putNode newNode
+
+insert :: DB m => Ref -> ByteString -> ByteString -> m Ref
+insert ref key val = insertRef ref (toPath key) val
