@@ -14,12 +14,13 @@ data Item = String ByteString
 
 encode :: Item -> ByteString
 encode x = case x of
-  String bytes  -> encodeLength 0x80 bytes
+  String bytes -> 
+    if BS.length bytes == 1 && BS.head bytes <= 0x7f then bytes
+    else encodeLength 0x80 bytes
   List children -> encodeLength 0xc0 (mconcat $ map encode children)
   where
     encodeLength :: Word8 -> ByteString -> ByteString
     encodeLength offset bytes 
-      | len == 1 && BS.head bytes <= 0x7f = bytes
       | len <= 55 = prefix len <> bytes
       | otherwise = 
         let lenBytes = encodeInt len

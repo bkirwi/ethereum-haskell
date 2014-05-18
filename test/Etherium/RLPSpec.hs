@@ -19,12 +19,13 @@ instance IsString RLP.Item where
   fromString = RLP.String . fromString
 
 instance Arbitrary RLP.Item where
-  arbitrary = sized $ \n -> 
-    if n <= 2 then strGen
-    else oneof [strGen]
+  arbitrary = sized item
     where 
+      item n 
+        | n <= 2 = strGen
+        | otherwise = oneof [strGen, resize (n `div` 2) listGen ]
       strGen = RLP.String <$> arbitrary
-      listGen = RLP.List <$> listOf arbitrary 
+      listGen = RLP.List <$> arbitrary
 
   shrink (RLP.String bytes) =
     RLP.String <$> shrink bytes
