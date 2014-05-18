@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Etherium.QuickCheck() where
+module Etherium.Testing() where
 
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)

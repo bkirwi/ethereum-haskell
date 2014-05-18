@@ -10,7 +10,7 @@ import Etherium.Trie.Path
 
 import Test.Hspec
 import Test.QuickCheck
-import Etherium.QuickCheck
+import Etherium.Testing
 
 spec :: Spec
 spec = do

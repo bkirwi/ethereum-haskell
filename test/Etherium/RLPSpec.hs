@@ -22,7 +22,7 @@ import qualified Etherium.RLP as RLP
 import Test.Hspec
 import Test.QuickCheck
 import Data.String(IsString, fromString)
-import Etherium.QuickCheck
+import Etherium.Testing
 
 instance IsString RLP.Item where
   fromString = RLP.String . fromString

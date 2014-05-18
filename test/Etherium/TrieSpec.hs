@@ -17,7 +17,7 @@ import Etherium.Trie.Path(asInt)
 
 import Test.Hspec
 import Test.QuickCheck
-import Etherium.QuickCheck
+import Etherium.Testing
 
 newtype MapDB = MapDB { getMap :: Map Digest Node }
   deriving (Show, Eq)
