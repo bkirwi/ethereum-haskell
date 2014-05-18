@@ -30,13 +30,13 @@ encode x = case x of
         len = BS.length bytes
         prefix n = BS.singleton $ offset + fromIntegral n
 
-encodeInt :: Int -> ByteString
+encodeInt :: Integral n => n -> ByteString
 encodeInt = BS.reverse <$> BS.unfoldr nextByte
   where
     nextByte 0 = Nothing
     nextByte n = Just (fromIntegral n, n `quot` 256)
 
-decodeInt :: ByteString -> Int
+decodeInt :: Integral n => ByteString -> n
 decodeInt = BS.foldl addByte 0 
   where
     addByte n b = (n * 256) + fromIntegral b

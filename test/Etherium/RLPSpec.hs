@@ -1,12 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Etherium.RLPSpec(spec) where
 
+import Control.Applicative
+import Data.Aeson as A
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import Data.ByteString (ByteString)
-import Data.Char(ord)
+import Data.Char(digitToInt)
 import Data.Word(Word8)
 import Data.Monoid
 import Data.Functor
+import Data.HashMap.Strict(toList)
+import qualified Data.Text as T
+import Data.Text(Text)
+import Data.Text.Encoding(encodeUtf8)
+
+import System.IO.Unsafe(unsafePerformIO) -- Sorry!
 
 import qualified Etherium.RLP as RLP
 
@@ -33,11 +42,45 @@ instance Arbitrary RLP.Item where
     let shrunkLists = RLP.List <$> shrink list
     in list ++ shrunkLists
 
+instance FromJSON RLP.Item where
+  parseJSON (Array a) = RLP.List <$> parseJSON (Array a) 
+  parseJSON (String s) = 
+    if not (T.null s) && T.head s == '#' 
+    then return . RLP.String . RLP.encodeInt . read . T.unpack . T.tail $ s
+    else return . RLP.String . encodeUtf8 $ s
+  parseJSON (Number n) =
+    let decodeNum :: Integer -> RLP.Item
+        decodeNum = RLP.String . RLP.encodeInt 
+    in fmap decodeNum $ parseJSON (Number n)
+
+instance FromJSON ByteString where
+  parseJSON (String s) = BS.pack . fromHex <$> parseJSON (String s)
+    where
+      fromHex :: String -> [Word8]
+      fromHex (a:b:rest) = fromIntegral (digitToInt a * 0x10 + digitToInt b) : fromHex rest 
+      fromHex [] = []
+
+data TestCases a = TestCases [(String, a)]
+
+data RLPCase = RLPCase RLP.Item ByteString
+
+instance FromJSON a => FromJSON (TestCases a) where
+  parseJSON (Object obj) = TestCases <$> mapM parseCase (toList obj)
+    where
+      parseCase (key, value) = do
+        parsedVal <- parseJSON value
+        return (T.unpack key, parsedVal)
+
+instance FromJSON RLPCase where
+  parseJSON (Object o) = RLPCase
+    <$> o .: "in"
+    <*> o .: "out"
+
 spec :: Spec
 spec = do
 
   it "should decode what it encodes (ints)" $ property $ \n ->
-    n >= 0 ==> (RLP.decodeInt . RLP.encodeInt $ n) `shouldBe` n
+    (n :: Int) >= 0 ==> (RLP.decodeInt . RLP.encodeInt $ n) `shouldBe` n
 
   describe "handle example integer conversions" $ do
     it "should encode 15" $ RLP.encodeInt 15 `shouldBe` "\x0f"
@@ -77,6 +120,14 @@ spec = do
     it "should encode lorem ipsum properly" $
       let encoded = RLP.encode "Lorem ipsum dolor sit amet, consectetur adipisicing elit"
       in ( "\xb8\x38Lorem " `BS.isPrefixOf` encoded) && ("elit" `BS.isSuffixOf` encoded )
+
+  describe "handles all common test cases" $ do
+
+    let file = unsafePerformIO $ LBS.readFile "test-cases/rlptest.json"
+        Just (TestCases testCases) = A.decode file 
+        testCase (name, (RLPCase i o)) = describe name $ i `encodesTo` o
+    mapM_ testCase testCases
+
   where 
     input `encodesTo` output = do
       it ("should encode " <> show input <> " as " <> show output) $ 
