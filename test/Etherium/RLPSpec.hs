@@ -4,9 +4,7 @@ module Etherium.RLPSpec(spec) where
 import Control.Applicative
 import Data.Aeson as A
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
 import Data.ByteString (ByteString)
-import Data.Char(digitToInt)
 import Data.Word(Word8)
 import Data.Monoid
 import Data.Functor
@@ -14,8 +12,6 @@ import Data.HashMap.Strict(toList)
 import qualified Data.Text as T
 import Data.Text(Text)
 import Data.Text.Encoding(encodeUtf8)
-
-import System.IO.Unsafe(unsafePerformIO) -- Sorry!
 
 import qualified Etherium.RLP as RLP
 
@@ -53,23 +49,7 @@ instance FromJSON RLP.Item where
         decodeNum = RLP.String . RLP.encodeInt 
     in fmap decodeNum $ parseJSON (Number n)
 
-instance FromJSON ByteString where
-  parseJSON (String s) = BS.pack . fromHex <$> parseJSON (String s)
-    where
-      fromHex :: String -> [Word8]
-      fromHex (a:b:rest) = fromIntegral (digitToInt a * 0x10 + digitToInt b) : fromHex rest 
-      fromHex [] = []
-
-data TestCases a = TestCases [(String, a)]
-
 data RLPCase = RLPCase RLP.Item ByteString
-
-instance FromJSON a => FromJSON (TestCases a) where
-  parseJSON (Object obj) = TestCases <$> mapM parseCase (toList obj)
-    where
-      parseCase (key, value) = do
-        parsedVal <- parseJSON value
-        return (T.unpack key, parsedVal)
 
 instance FromJSON RLPCase where
   parseJSON (Object o) = RLPCase
@@ -121,12 +101,9 @@ spec = do
       let encoded = RLP.encode "Lorem ipsum dolor sit amet, consectetur adipisicing elit"
       in ( "\xb8\x38Lorem " `BS.isPrefixOf` encoded) && ("elit" `BS.isSuffixOf` encoded )
 
-  describe "handles all common test cases" $ do
-
-    let file = unsafePerformIO $ LBS.readFile "test-cases/rlptest.json"
-        Just (TestCases testCases) = A.decode file 
-        testCase (name, (RLPCase i o)) = describe name $ i `encodesTo` o
-    mapM_ testCase testCases
+  describe "handles all common test cases" $ testCommon "rlptest" $ \test ->
+      let RLPCase i o = test
+      in i `encodesTo` o
 
   where 
     input `encodesTo` output = do
