@@ -1,3 +1,4 @@
+{-# LANGUAGE DefaultSignatures, DeriveGeneric, TypeOperators, FlexibleContexts #-}
 module Etherium.RLP.Convert(AsRLP, toRLP, fromRLP) where
 
 import qualified Data.ByteString as BS
@@ -8,12 +9,24 @@ import Data.Monoid
 import Data.Functor
 import qualified Data.Sequence as Seq
 import Data.Foldable(toList)
+import GHC.Generics
 
 import Etherium.RLP
 
 class AsRLP a where
+
   fromRLP :: Item -> Maybe a
+  default fromRLP :: (Generic a, G_AsRLP (Rep a)) => Item -> Maybe a
+  fromRLP (List item) = do
+    (got, remaining) <- g_fromRLP item
+    case remaining of
+      [] -> Just $ to got
+      _ -> Nothing
+  fromRLP (String _) = Nothing
+
   toRLP :: a -> Item
+  default toRLP :: (Generic a, G_AsRLP (Rep a)) => a -> Item
+  toRLP item = List . g_toRLP $ from item
 
 instance AsRLP Item where
   fromRLP = Just
@@ -32,3 +45,30 @@ instance AsRLP a => AsRLP [a] where
 instance AsRLP a => AsRLP (Seq.Seq a) where
   fromRLP item = Seq.fromList <$> fromRLP item
   toRLP = toRLP . toList
+
+-- Generics!
+
+class G_AsRLP f where
+  g_fromRLP :: [Item] -> Maybe (f a, [Item])
+  g_toRLP :: f a -> [Item]
+
+instance G_AsRLP a => G_AsRLP (M1 i c a) where
+  g_fromRLP x = do
+    (item, rest) <- g_fromRLP x
+    return (M1 item, rest)
+  g_toRLP (M1 x) = g_toRLP x
+
+instance AsRLP a => G_AsRLP (K1 i a) where
+  g_fromRLP [] = Nothing
+  g_fromRLP (x:xs) = do
+    item <- fromRLP x
+    return (K1 item, xs)
+  g_toRLP (K1 x) = [toRLP x]
+
+instance (G_AsRLP a, G_AsRLP b) => G_AsRLP (a :*: b) where
+  g_fromRLP list = do
+    (a, list') <- g_fromRLP list
+    (b, list'') <- g_fromRLP list'
+    return (a :*: b, list'')
+    
+  g_toRLP (a :*: b) = g_toRLP a ++ g_toRLP b
