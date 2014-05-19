@@ -53,6 +53,13 @@ instance AsRLP Integer where
     | n >= 0 = String $ encodeInt n
     | otherwise = error "Can't encode a negative integral type"
 
+instance AsRLP Int where
+  fromRLP (String s) = Just $ decodeInt s
+  fromRLP (List _) = Nothing
+  toRLP n
+    | n >= 0 = String $ encodeInt n
+    | otherwise = error "Can't encode a negative integral type"
+
 instance AsRLP a => AsRLP (Maybe a) where
   fromRLP (String s) | BS.null s = Just Nothing
   fromRLP x = fmap Just $ fromRLP x
