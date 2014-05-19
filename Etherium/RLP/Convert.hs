@@ -46,6 +46,19 @@ instance AsRLP a => AsRLP (Seq.Seq a) where
   fromRLP item = Seq.fromList <$> fromRLP item
   toRLP = toRLP . toList
 
+instance AsRLP Integer where
+  fromRLP (String s) = Just $ decodeInt s
+  fromRLP (List _) = Nothing
+  toRLP n
+    | n >= 0 = String $ encodeInt n
+    | otherwise = error "Can't encode a negative integral type"
+
+instance AsRLP a => AsRLP (Maybe a) where
+  fromRLP (String s) | BS.null s = Just Nothing
+  fromRLP x = fmap Just $ fromRLP x
+  toRLP (Just a) = toRLP a
+  toRLP (Nothing) = String BS.empty
+
 -- Generics!
 
 class G_AsRLP f where
