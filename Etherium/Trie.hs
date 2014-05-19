@@ -111,21 +111,34 @@ lookup ref bs = lookupPath ref $ toPath bs
 emptyRefs = Seq.replicate 16 $ Literal Empty
 emptyRef = Literal Empty
 
+toFull :: DB m => Node -> m Node
+toFull Empty = return $ Full emptyRefs BS.empty
+toFull f@(Full _ _) = return f
+toFull (Shortcut [] (Left ref)) = getNode ref >>= toFull
+toFull (Shortcut [] (Right bs)) = return $ Full emptyRefs bs
+toFull (Shortcut (p:ps) val) = do
+  ref <- putNode $ Shortcut ps val
+  let newRefs = Seq.update (asInt p) ref emptyRefs 
+  return $ Full newRefs BS.empty
+
 insertPath :: DB m => Node -> Path -> ByteString -> m Node
 insertPath Empty path bs = return $ Shortcut path $ Right bs
-insertPath (Shortcut nPath nVal) path bs =
-  case (splitPrefix nPath path, nVal) of
-    ((prefix, [], []), Right _) -> return $ Shortcut prefix $ Right bs
-    ((prefix, [], suffix), Left ref) -> do
+insertPath (Shortcut nPath nVal) path bs = do
+  let (prefix, nSuffix, suffix) = splitPrefix nPath path
+  next <- case (nSuffix, suffix, nVal) of
+    ([], [], Right _) -> return $ Right bs
+    ([], _, Left ref) -> do
       node <- getNode ref
-      inserted <- insertPath node suffix bs
-      nRef <- putNode inserted
-      return $ Shortcut prefix $ Left nRef 
-    (([], nSuffix, suffix), _) -> combine nSuffix suffix
-    ((prefix, nSuffix, suffix), _) -> do
-      combined <- combine nSuffix suffix
-      ref <- putNode combined
-      return $ Shortcut prefix $ Left ref
+      newNode <- insertPath node suffix bs
+      return $ Left newNode 
+    _ -> do 
+      full <- toFull (Shortcut nSuffix nVal) 
+      newNode <- insertPath full suffix bs
+      return $ Left newNode
+  case (prefix, next) of
+    ([], Left newNode) -> return $ newNode
+    (_, Left newNode) -> Shortcut prefix . Left <$> putNode newNode 
+    (_, Right bs) -> return $ Shortcut prefix $ Right bs 
   where
     splitPrefix [] b = ([], [], b)  
     splitPrefix a [] = ([], a, [])  
@@ -134,21 +147,6 @@ insertPath (Shortcut nPath nVal) path bs =
         let (prefix, aSuffix, bSuffix) = splitPrefix as bs
         in (a:prefix, aSuffix, bSuffix)
       | otherwise = ([], a:as, b:bs)
-    combine [] (p:ps) = do
-      newRef <- putNode $ Shortcut ps $ Right bs 
-      let newRefs = Seq.update (asInt p) newRef emptyRefs 
-      return $ Full newRefs $ fromRight nVal
-    combine (p:ps) [] = do
-      newRef <- putNode $ Shortcut ps nVal 
-      let newRefs = Seq.update (asInt p) newRef emptyRefs 
-      return $ Full newRefs bs
-    combine (p:ps) (q:qs) = do
-      pRef <- putNode $ Shortcut ps nVal 
-      qRef <- putNode $ Shortcut qs $ Right bs 
-      let pRefs = Seq.update (asInt p) pRef emptyRefs 
-          qRefs = Seq.update (asInt q) qRef pRefs
-      return $ Full qRefs BS.empty
-    fromRight (Right x) = x
 insertPath (Full refs val) [] bs = return $ Full refs bs 
 insertPath (Full refs val) (p:ps) bs = do
   let index = asInt p
