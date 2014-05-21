@@ -12,7 +12,11 @@ import Etherium.Trie(Digest)
 
 data Payload = HelloP Hello
              | DisconnectP Disconnect
-             deriving (Show)
+             | PingP Ping
+             | PongP Pong
+             deriving (Show, Generic)
+
+instance AsRLP Payload
 
 data Hello = Hello
   { protocolVersion :: Int
@@ -23,38 +27,32 @@ data Hello = Hello
   , nodeId :: ByteString
   } deriving (Show, Generic)
 
-data Disconnect = DisconnectRequested
-                | TCPError
-                | BadProtocol
-                | UselessPeer
-                | TooManyPeers
-                | AlreadyConnected
-                | WrongGenesisBlock
-                | IncompatibleProtocol
-                | ClientQuitting
-                deriving (Show, Enum)
+instance AsRLP Hello where tag = tagInt 0x00
 
-instance AsRLP Hello
+data DisconnectReason = DisconnectRequested
+                      | TCPError
+                      | BadProtocol
+                      | UselessPeer
+                      | TooManyPeers
+                      | AlreadyConnected
+                      | WrongGenesisBlock
+                      | IncompatibleProtocol
+                      | ClientQuitting
+                      deriving (Show, Enum)
 
-instance AsRLP Disconnect where
+instance AsRLP DisconnectReason where
   toRLP = toRLP . fromEnum
   fromRLP = fmap toEnum . fromRLP
 
-instance AsRLP Payload where
-  toRLP payload = case payload of
-    HelloP h      -> encode 0x00 h
-    DisconnectP d -> encode 0x01 d
-    where
-      encode :: AsRLP a => Int -> a -> RLP.Item
-      encode n a = case toRLP a of
-        RLP.List list -> RLP.List $ toRLP n : list
-        str -> RLP.List [toRLP n, str]
+data Disconnect = Disconnect (Maybe DisconnectReason)
+  deriving (Show, Generic)
 
-  fromRLP (RLP.List (x:xs)) = do
-    pType <- fromRLP x
-    let readAs :: AsRLP a => (a -> Payload) -> Maybe Payload
-        readAs toPayload = fmap toPayload . fromRLP $ RLP.List xs
-    case (pType :: Int) of
-      0x00 -> readAs HelloP
-      0x01 -> readAs DisconnectP 
-  fromRLP _ = Nothing
+instance AsRLP Disconnect where tag = tagInt 0x01
+
+data Ping = Ping deriving (Show, Generic)
+
+instance AsRLP Ping where tag = tagInt 0x02
+
+data Pong = Pong deriving (Show, Generic)
+
+instance AsRLP Pong where tag = tagInt 0x03

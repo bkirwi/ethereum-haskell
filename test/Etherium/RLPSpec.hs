@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Etherium.RLPSpec(spec) where
+{-# LANGUAGE DeriveGeneric #-}
+module Etherium.RLPSpec(spec, One(..), Other(..), Union(..)) where
 
 import Control.Applicative
 import Data.Aeson as A
@@ -12,8 +13,10 @@ import Data.HashMap.Strict(toList)
 import qualified Data.Text as T
 import Data.Text(Text)
 import Data.Text.Encoding(encodeUtf8)
+import GHC.Generics
 
 import qualified Etherium.RLP as RLP
+import Etherium.RLP.Convert
 
 import Test.Hspec
 import Test.QuickCheck
@@ -55,6 +58,28 @@ instance FromJSON RLPCase where
   parseJSON (Object o) = RLPCase
     <$> o .: "in"
     <*> o .: "out"
+
+data Empty = Empty
+  deriving (Generic, Eq, Show)
+data Single = Single ByteString
+  deriving (Generic, Eq, Show)
+data Many = Many ByteString ByteString
+  deriving (Generic, Eq, Show)
+
+data One = One
+  deriving (Generic, Eq, Show)
+data Other = Other Many
+  deriving (Generic, Eq, Show)
+data Union = OneU One
+           | OtherU Other
+  deriving (Generic, Eq, Show)
+
+instance AsRLP Empty
+instance AsRLP Single
+instance AsRLP Many
+instance AsRLP One where tag = tagInt 0
+instance AsRLP Other where tag = tagInt 1
+instance AsRLP Union
 
 spec :: Spec
 spec = do
@@ -102,10 +127,33 @@ spec = do
       in ( "\xb8\x38Lorem " `BS.isPrefixOf` encoded) && ("elit" `BS.isSuffixOf` encoded )
 
   describe "handles all common test cases" $ testCommon "rlptest" $ \test ->
-      let RLPCase i o = test
-      in i `encodesTo` o
+    let RLPCase i o = test
+    in i `encodesTo` o
+
+  describe "derives reasonable encoding / decodings" $ do
+
+    it "encodes an empty constructor as the empty list" $
+      Empty `convertsTo` RLP.List []
+
+    it "encodes a single-element constructor as that value" $ property $ \bs ->
+      Single bs `convertsTo` toRLP bs
+
+    it "encodes a product as a list" $ property $ \bs0 bs1 ->
+      Many bs0 bs1 `convertsTo` toRLP [bs0, bs1]
+
+    it "implements tags" $ One `convertsTo` toRLP [0 :: Int]
+
+    it "encodes first element of a union" $
+      OneU One `convertsTo` toRLP One
+
+    it "encodes the second element of a union" $ property $ \bs0 bs1 ->
+      let other = Other $ Many bs0 bs1
+      in OtherU other `convertsTo` toRLP other
 
   where 
+    input `convertsTo` output = do
+      toRLP input `shouldBe` output
+      fromRLP output `shouldBe` Just input
     input `encodesTo` output = do
       it ("should encode " <> show input <> " as " <> show output) $ 
         RLP.encode input `shouldBe` output
