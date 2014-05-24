@@ -67,8 +67,9 @@ library
                  , Etherium.Prelude
                  , Etherium.RLP
                  , Etherium.RLP.Convert   
-                 , Etherium.Trie.Path
                  , Etherium.Trie
+                 , Etherium.Trie.Internal
+                 , Etherium.Trie.Path
                  , Etherium.Wire
   
   -- Modules included in this library but not exported.
