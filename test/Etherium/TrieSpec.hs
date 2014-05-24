@@ -7,11 +7,8 @@ import Prelude hiding (lookup)
 import Control.Monad.State
 import Data.Aeson
 import qualified Data.ByteString as BS
-import Data.ByteString (ByteString)
 import qualified Data.Map as Map
 import Data.Map(Map)
-import Data.Maybe
-import Data.Functor
 import Data.List(isPrefixOf)
 import qualified Data.Sequence as Seq
 import Data.Sequence(Seq)
@@ -19,8 +16,8 @@ import qualified Data.Text.Encoding as T
 import Data.Text (Text)
 import GHC.Generics (Generic)
 
+import Etherium.Prelude
 import Etherium.Trie
-import Etherium.Trie.Path(asInt)
 
 import Test.Hspec
 import Test.QuickCheck
@@ -138,7 +135,7 @@ spec = do
           case node of
             Full refs _ -> do
               let path = pHead : pTail
-                  next = refs `Seq.index` asInt pHead
+                  next = refs `Seq.index` word4toInt pHead
               val <- lookupPath next pTail
               result <- lookupPath ref path
               return $ result `shouldBe` val
@@ -159,6 +156,13 @@ spec = do
         root1 <- insert root0 key1 value1
         got <- lookup root1 key0
         return $ got `shouldBe` value0
+
+    it "should keep the same hash when reinserting a key" $ property $ \root key ->
+      runDB $ do
+        ref <- root
+        got <- lookup ref key
+        newRef <- insert ref key got
+        return $ newRef `shouldBe` ref
 
   describe "Common test cases" $ testCommon "trietest" $ \test ->
     it ("should hash to " ++ (show $ Digest $ expectation test) ++ " when all values are inserted") $ 

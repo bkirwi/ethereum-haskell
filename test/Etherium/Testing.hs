@@ -3,16 +3,13 @@ module Etherium.Testing(testCommon) where
 
 import Data.Aeson as A
 import qualified Data.ByteString as BS
-import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Char(digitToInt)
 import Data.HashMap.Strict(toList)
-import Data.Monoid
-import Data.Functor
 import qualified Data.Text as T
-import Data.Word(Word8)
 import System.IO.Unsafe(unsafePerformIO) -- Sorry!
 
+import Etherium.Prelude
 import Etherium.Trie.Path
 
 import Test.Hspec
@@ -22,7 +19,7 @@ import Data.String(IsString, fromString)
 instance Arbitrary Word4 where
   arbitrary = fstWord4 <$> arbitrary
   shrink word4 = do
-    shrunk <- shrink $ asInt word4
+    shrunk <- shrink $ word4toInt word4
     return $ sndWord4 $ fromIntegral shrunk
 
 instance Arbitrary ByteString where 

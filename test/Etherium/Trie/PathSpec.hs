@@ -5,11 +5,9 @@ module Etherium.Trie.PathSpec(spec) where
 import Prelude hiding (seq)
 import Data.Aeson
 import qualified Data.ByteString as BS
-import Data.ByteString(ByteString)
-import Data.Functor
-import Data.Monoid
 import GHC.Generics
 
+import Etherium.Prelude
 import Etherium.Trie.Path
 
 import Test.Hspec
@@ -33,10 +31,10 @@ spec = do
     (decodePath $ encodePath x y) `shouldBe` Just (x, y) 
 
   it "should recover the first nibble" $ property $ \x y ->
-    (fstWord4 $ x `packByte` y) `shouldBe` x
+    (fstWord4 $ x `packWord8` y) `shouldBe` x
 
   it "should recover the second nibble" $ property $ \x y ->
-    (sndWord4 $ x `packByte` y) `shouldBe` y
+    (sndWord4 $ x `packWord8` y) `shouldBe` y
 
   describe "performs example conversions" $ testCommon "hexencodetest" $ \test -> do
     it ("should encode to " ++ show (out test)) $

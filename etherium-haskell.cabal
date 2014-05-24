@@ -64,6 +64,7 @@ test-suite test
 library
   -- Modules exported by the library.
   exposed-modules: Etherium.Block
+                 , Etherium.Prelude
                  , Etherium.RLP
                  , Etherium.RLP.Convert   
                  , Etherium.Trie.Path

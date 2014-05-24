@@ -13,20 +13,15 @@ import Prelude hiding (lookup)
 import qualified Crypto.Hash.SHA3 as SHA3
 import Control.Error
 import Control.Monad.State
-import Data.Bits
 import qualified Data.ByteString as BS
-import Data.ByteString(ByteString)
 import Data.Char (intToDigit)
-import Data.Functor
 import Data.List(stripPrefix)
-import Data.Maybe
 import qualified Data.Map as Map
 import Data.Map(Map)
-import Data.Monoid
-import Data.Word(Word8)
 import qualified Data.Sequence as Seq
 import Data.Sequence(Seq)
 
+import Etherium.Prelude
 import qualified Etherium.RLP as RLP
 import Etherium.RLP.Convert
 import Etherium.Trie.Path
@@ -35,7 +30,7 @@ newtype Digest = Digest ByteString
   deriving (Ord, Eq, AsRLP)
 
 instance Show Digest where
-  show (Digest bs) = map (intToDigit . asInt) $ toPath bs 
+  show (Digest bs) = map (intToDigit . word4toInt) $ unpackWord4s bs 
 
 data Ref = Hash Digest | Literal Node
   deriving (Show, Eq)
@@ -107,10 +102,10 @@ lookupPath root path = getNode root >>= getVal
         Just remaining -> lookupPath ref remaining
     getVal (Full refs val) = case path of
       [] -> return val
-      (w:rest) -> lookupPath (refs `Seq.index` asInt w) rest
+      (w:rest) -> lookupPath (refs `Seq.index` word4toInt w) rest
 
 lookup :: DB m => Ref -> ByteString -> m ByteString
-lookup ref bs = lookupPath ref $ toPath bs
+lookup ref bs = lookupPath ref $ unpackWord4s bs
 
 emptyRefs = Seq.replicate 16 $ Literal Empty
 emptyRef = Literal Empty
@@ -122,7 +117,7 @@ toFull (Shortcut [] (Left ref)) = getNode ref >>= toFull
 toFull (Shortcut [] (Right bs)) = return $ Full emptyRefs bs
 toFull (Shortcut (p:ps) val) = do
   ref <- putNode $ Shortcut ps val
-  let newRefs = Seq.update (asInt p) ref emptyRefs 
+  let newRefs = Seq.update (word4toInt p) ref emptyRefs 
   return $ Full newRefs BS.empty
 
 insertPath :: DB m => Node -> Path -> ByteString -> m Node
@@ -155,7 +150,7 @@ insertPath (Shortcut nPath nVal) path bs = do
       | otherwise = ([], a:as, b:bs)
 insertPath (Full refs val) [] bs = return $ Full refs bs 
 insertPath (Full refs val) (p:ps) bs = do
-  let index = asInt p
+  let index = word4toInt p
       ref = refs `Seq.index` index
   newRef <- insertRef ref ps bs
   let newRefs = Seq.update index newRef refs
@@ -168,4 +163,4 @@ insertRef ref path bs = do
   putNode newNode
 
 insert :: DB m => Ref -> ByteString -> ByteString -> m Ref
-insert ref key val = insertRef ref (toPath key) val
+insert ref key val = insertRef ref (unpackWord4s key) val
