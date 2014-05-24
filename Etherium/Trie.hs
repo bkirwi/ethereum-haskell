@@ -16,6 +16,7 @@ import Control.Monad.State
 import Data.Bits
 import qualified Data.ByteString as BS
 import Data.ByteString(ByteString)
+import Data.Char (intToDigit)
 import Data.Functor
 import Data.List(stripPrefix)
 import Data.Maybe
@@ -31,7 +32,10 @@ import Etherium.RLP.Convert
 import Etherium.Trie.Path
 
 newtype Digest = Digest ByteString
-  deriving (Ord, Show, Eq, AsRLP)
+  deriving (Ord, Eq, AsRLP)
+
+instance Show Digest where
+  show (Digest bs) = map (intToDigit . asInt) $ toPath bs 
 
 data Ref = Hash Digest | Literal Node
   deriving (Show, Eq)
