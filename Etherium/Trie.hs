@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Etherium.Trie
-  ( DB(..), Digest
+  ( DB(..), Digest(..)
   , getNode, putNode
   , lookup, lookupPath
   , insert, insertPath

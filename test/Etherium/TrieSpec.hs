@@ -1,9 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Etherium.TrieSpec(spec) where
 
 import Prelude hiding (lookup)
 import Control.Monad.State
+import Data.Aeson
+import qualified Data.ByteString as BS
+import Data.ByteString (ByteString)
 import qualified Data.Map as Map
 import Data.Map(Map)
 import Data.Maybe
@@ -11,8 +15,11 @@ import Data.Functor
 import Data.List(isPrefixOf)
 import qualified Data.Sequence as Seq
 import Data.Sequence(Seq)
+import qualified Data.Text.Encoding as T
+import Data.Text (Text)
+import GHC.Generics (Generic)
 
-import Etherium.Trie as P
+import Etherium.Trie
 import Etherium.Trie.Path(asInt)
 
 import Test.Hspec
@@ -62,6 +69,13 @@ instance Show (State MapDB Ref) where
 
 runDB :: (State MapDB a) -> a
 runDB x = fst $ runState x emptyMap
+
+data TrieCase = TrieCase
+  { inputs :: [(Text, Text)]
+  , expectation :: ByteString
+  } deriving (Show, Generic)
+
+instance FromJSON TrieCase 
 
 spec :: Spec
 spec = do
@@ -145,4 +159,11 @@ spec = do
         root1 <- insert root0 key1 value1
         got <- lookup root1 key0
         return $ got `shouldBe` value0
+
+  describe "Common test cases" $ testCommon "trietest" $ \test ->
+    it ("should hash to " ++ (show $ Digest $ expectation test) ++ " when all values are inserted") $ 
+      let result = runDB $ foldM insertPair (Literal Empty) $ inputs test 
+          pack = T.encodeUtf8
+          insertPair root (key, value) = insert root (pack key) (pack value)
+      in result `shouldBe` (Hash . Digest $ expectation test)
 
