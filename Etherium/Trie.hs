@@ -126,7 +126,9 @@ toFull (Shortcut (p:ps) val) = do
   return $ Full newRefs BS.empty
 
 insertPath :: DB m => Node -> Path -> ByteString -> m Node
-insertPath Empty path bs = return $ Shortcut path $ Right bs
+insertPath Empty path bs 
+  | BS.null bs = return Empty
+  | otherwise = return $ Shortcut path $ Right bs
 insertPath (Shortcut nPath nVal) path bs = do
   let (prefix, nSuffix, suffix) = splitPrefix nPath path
   next <- case (nSuffix, suffix, nVal) of
