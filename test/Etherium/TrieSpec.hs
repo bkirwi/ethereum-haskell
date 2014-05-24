@@ -39,7 +39,7 @@ instance Arbitrary (State MapDB Ref) where
   arbitrary = sized anyNode
     where
       anyNode size
-        | size <= 1 = empty
+        | size <= 1 = oneof [empty, shortcutVal]
         | otherwise = oneof [empty, shortcutVal, shortcutRef, node]
         where
           empty, shortcutVal, shortcutRef, node :: Gen (State MapDB Ref)
@@ -47,19 +47,23 @@ instance Arbitrary (State MapDB Ref) where
           shortcutVal = do
             path <- arbitrary
             value <- arbitrary
-            return $ putNode $ Shortcut path $ Right value
+            return $ do
+              ref <- putNode $ Shortcut path $ Right value
+              normalize ref
           shortcutRef = do
             path <- arbitrary
             refM <- anyNode (size - 1)
             return $ do
               ref <- refM 
-              putNode $ Shortcut path $ Left ref
+              newRef <- putNode $ Shortcut path $ Left ref
+              normalize newRef
           node = do
-            refsM <- sequence $ replicate 16 $ anyNode (size `div` 16)
+            refsM <- sequence $ replicate 16 $ anyNode (size `div` 8)
             value <- arbitrary
             return $ do
               refs <- sequence $ refsM
-              putNode $ Full (Seq.fromList refs) value
+              ref <- putNode $ Full (Seq.fromList refs) value
+              normalize ref
 
 instance Show (State MapDB Ref) where
   show x = show $ runState x emptyMap

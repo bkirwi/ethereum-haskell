@@ -5,7 +5,7 @@ module Etherium.Trie.Internal
   , getNode, putNode
   , lookupPath
   , insertRef, insertPath
-  , emptyRef
+  , emptyRef, normalize
   , Ref(..), Node(..)
   ) where
 
@@ -14,6 +14,7 @@ import Control.Error
 import Control.Monad.State
 import qualified Data.ByteString as BS
 import Data.Char (intToDigit)
+import Data.Foldable (toList)
 import Data.List(stripPrefix)
 import qualified Data.Map as Map
 import Data.Map(Map)
@@ -156,4 +157,29 @@ insertRef :: DB m => Ref -> Path -> ByteString -> m Ref
 insertRef ref path bs = do
   node <- getNode ref
   newNode <- insertPath node path bs
-  putNode newNode
+  newRef <- putNode newNode
+  normalize newRef
+
+normalize :: DB m => Ref -> m Ref
+normalize ref = getNode ref >>= nrml >>= putNode
+  where
+    nrml :: DB m => Node -> m Node
+    nrml Empty = return Empty
+    nrml (Shortcut [] (Left ref)) = getNode ref >>= nrml
+    nrml (Shortcut path (Left ref)) = do
+      node <- getNode ref >>= nrml
+      addPrefix path node
+    nrml (Shortcut _ (Right val)) | BS.null val = return Empty
+    nrml s@(Shortcut _ _) = return s
+    nrml (Full refs val) = do
+      nrmlRefs <- mapM normalize $ toList refs
+      let nonEmpty = filter (\x -> snd x /= Literal Empty) $ zip [0..] nrmlRefs
+      case (BS.null val, nonEmpty) of
+        (True, []) -> return Empty
+        (True, (w, ref) : []) -> getNode ref >>= nrml >>= addPrefix [sndWord4 w]
+        (False, []) -> return $ Shortcut [] $ Right val
+        _ -> return $ Full (Seq.fromList nrmlRefs) val
+    addPrefix path node = case node of
+      Empty -> return Empty
+      Shortcut subpath val -> return $ Shortcut (path ++ subpath) val
+      _ -> Shortcut path . Left <$> putNode node
