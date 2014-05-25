@@ -4,11 +4,9 @@
 module Etherium.TrieSpec(spec) where
 
 import Prelude hiding (lookup)
-import Control.Monad.State
+import Control.Monad
 import Data.Aeson
 import qualified Data.ByteString as BS
-import qualified Data.Map as Map
-import Data.Map(Map)
 import Data.List(isPrefixOf)
 import qualified Data.Sequence as Seq
 import Data.Sequence(Seq)
@@ -18,31 +16,20 @@ import GHC.Generics (Generic)
 
 import Etherium.Prelude
 import Etherium.Trie
+import Etherium.Trie.MapDB
 
 import Test.Hspec
 import Test.QuickCheck
 import Etherium.Testing
 
-newtype MapDB = MapDB { getMap :: Map Digest Node }
-  deriving (Show, Eq)
-
-emptyMap = MapDB { getMap = Map.empty }
-
-instance DB (State MapDB) where
-  getDB key = getNode <$> getMap <$> get
-    where getNode map = fromMaybe Empty $ Map.lookup key map
-  putDB key value = do
-    map <- get
-    put $ MapDB { getMap = Map.insert key value $ getMap map }
-
-instance Arbitrary (State MapDB Ref) where
+instance Arbitrary (MapDB Ref) where
   arbitrary = sized anyNode
     where
       anyNode size
         | size <= 1 = oneof [empty, shortcutVal]
         | otherwise = oneof [empty, shortcutVal, shortcutRef, node]
         where
-          empty, shortcutVal, shortcutRef, node :: Gen (State MapDB Ref)
+          empty, shortcutVal, shortcutRef, node :: Gen (MapDB Ref)
           empty = return $ putNode Empty
           shortcutVal = do
             path <- arbitrary
@@ -65,12 +52,6 @@ instance Arbitrary (State MapDB Ref) where
               ref <- putNode $ Full (Seq.fromList refs) value
               normalize ref
 
-instance Show (State MapDB Ref) where
-  show x = show $ runState x emptyMap
-
-runDB :: (State MapDB a) -> a
-runDB x = fst $ runState x emptyMap
-
 data TrieCase = TrieCase
   { inputs :: [(Text, Text)]
   , expectation :: ByteString
@@ -84,30 +65,30 @@ spec = do
     
     describe "Empty" $ do
       it "should always return an empty string" $ property $ \path ->
-        let result = runDB $ do
+        let result = runMapDB $ do
               ref <- putNode Empty
               lookupPath ref path
         in result `shouldBe` ""
     
     describe "Shortcut" $ do
       it "should retrieve the value with same path" $ property $ \path val ->
-        let result = runDB $ do
+        let result = runMapDB $ do
               ref <- putNode $ Shortcut path $ Right val
               lookupPath ref path
         in result `shouldBe` val
         
       it "should retrieve default when paths differ" $ property $ \path nodePath val ->
         path /= nodePath ==>
-          let result = runDB $ do
+          let result = runMapDB $ do
                 ref <- putNode $ Shortcut nodePath $ Right val
                 lookupPath ref path
           in result `shouldBe` ""
 
       it "should follow the path to the targeted node" $ property $ \root initPath subpath ->
-        let expected = runDB $ do
+        let expected = runMapDB $ do
               ref <- root
               lookupPath ref subpath
-            result = runDB $ do
+            result = runMapDB $ do
               sub <- root
               ref <- putNode $ Shortcut initPath $ Left sub 
               lookupPath ref (initPath ++ subpath)
@@ -115,7 +96,7 @@ spec = do
 
       it "should return nothing when paths conflict" $ property $ \root path nodePath ->
         not (nodePath `isPrefixOf` path) ==>
-          let result = runDB $ do
+          let result = runMapDB $ do
                 sub <- root
                 ref <- putNode $ Shortcut nodePath $ Left sub
                 lookupPath ref path
@@ -123,7 +104,7 @@ spec = do
 
     describe "Full" $ do
       it "should get the value with an empty path" $ property $ \root ->
-        runDB $ do
+        runMapDB $ do
           ref <- root
           node <- getNode ref
           case node of
@@ -133,7 +114,7 @@ spec = do
             _ -> discard
 
       it "should follow the path to descendants" $ property $ \root pHead pTail->
-        runDB $ do
+        runMapDB $ do
           ref <- root
           node <- getNode ref
           case node of
@@ -147,14 +128,14 @@ spec = do
 
   describe "Externally-visible properties" $ do
     it "should read its writes" $ property $ \root key value ->
-      runDB $ do
+      runMapDB $ do
         ref <- root
         ref0 <- insert ref key value
         got <- lookup ref0 key
         return $ got `shouldBe` value
 
     it "preserves writes to different keys" $ property $ \root key0 value0 key1 value1 ->
-      key0 /= key1 ==> runDB $ do
+      key0 /= key1 ==> runMapDB $ do
         ref <- root
         root0 <- insert ref key0 value0
         root1 <- insert root0 key1 value1
@@ -162,7 +143,7 @@ spec = do
         return $ got `shouldBe` value0
 
     it "should keep the same hash when reinserting a key" $ property $ \root key ->
-      runDB $ do
+      runMapDB $ do
         ref <- root
         got <- lookup ref key
         newRef <- insert ref key got
@@ -170,7 +151,7 @@ spec = do
 
   describe "Common test cases" $ testCommon "trietest" $ \test ->
     it ("should hash to " ++ (show $ Digest $ expectation test) ++ " when all values are inserted") $ 
-      let result = runDB $ foldM insertPair (Literal Empty) $ inputs test 
+      let result = runMapDB $ foldM insertPair (Literal Empty) $ inputs test 
           pack = T.encodeUtf8
           insertPair root (key, value) = insert root (pack key) (pack value)
       in result `shouldBe` (Hash . Digest $ expectation test)

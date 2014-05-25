@@ -69,6 +69,7 @@ library
                  , Etherium.RLP.Convert   
                  , Etherium.Trie
                  , Etherium.Trie.Internal
+                 , Etherium.Trie.MapDB
                  , Etherium.Trie.Path
                  , Etherium.Wire
   

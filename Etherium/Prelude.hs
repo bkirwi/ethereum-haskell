@@ -1,14 +1,16 @@
 module Etherium.Prelude
   ( Word4, word4to8, packWord8, fstWord4, sndWord4, word4toInt, unpackWord4s
-  , ByteString, Word8
-  , module Data.Functor, module Data.Maybe, module Data.Monoid
+  , ByteString, Word8, Map
+  , module Data.Functor, module Data.Maybe, module Data.Monoid, module Control.Applicative
   ) where
 
+import Control.Applicative
 import Data.Bits
 import qualified Data.ByteString as BS
 import Data.ByteString(ByteString)
 import Data.Char (intToDigit)
 import Data.Word (Word8)
+import Data.Map (Map)
 import Data.Functor
 import Data.Maybe
 import Data.Monoid
