@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Etherium.Block() where
 
 import qualified Data.ByteString as BS
@@ -10,47 +11,58 @@ import qualified Etherium.RLP as RLP
 import Etherium.RLP.Convert
 import Etherium.Trie(Digest)
 
-data Block = Block BlockHeader [Transaction] [Uncle] [StackFrame]
-  deriving (Show, Generic)
+newtype Address = Address ByteString
+  deriving (Show, AsRLP)
 
--- Stubs
-type Transaction = RLP.Item
-type Uncle = RLP.Item
-
-data BlockHeader = BlockHeader
-  { parentHash :: ByteString
-  , blockNumber :: Integer
-  , transactionsDigest :: Digest
-  , uncleDigest :: Digest
-  , stackDigest :: Digest
-  , coinbaseAddress :: ByteString
-  , stateRoot :: Digest
-  , difficulty :: Integer
-  , timestamp :: Integer
-  , extraData :: ByteString
-  , blockNonce :: ByteString
+data Block = Block 
+  { blockHeader :: BlockHeader
+  , uncleList :: [BlockHeader] 
+  , receiptList :: [Receipt]
   } deriving (Show, Generic)
 
--- Stub
-data StackFrame = StackFrame RLP.Item RLP.Item
-  deriving (Show, Generic)
+data BlockHeader = BlockHeader
+  { parentHash :: Digest          -- ^ Hp
+  , uncleDigest :: Digest         -- ^ Hu
+  , coinbaseAddress :: ByteString -- ^ Hb
+  , blockStateRoot :: Digest      -- ^ Hr
+  , transactionsRoot :: Digest    -- ^ Ht
+  , difficulty :: Integer         -- ^ Hd
+  , blockNumber :: Integer        -- ^ Hi
+  , blockGasPrice :: Integer      -- ^ Hm
+  , blockGasLimit :: Integer
+  , blockGasUsed :: Integer
+  , timestamp :: Integer
+  , extraData :: ByteString
+  , blockNonce :: Digest
+  } deriving (Show, Generic)
 
 data Account = Account
   { accountBalance :: Integer
   , accountNonce :: Integer
-  , contractInfo :: ContractInfo
+  , contractState :: Digest
+  , contractCode :: Digest
   } deriving (Show, Generic)
 
-data ContractInfo = ContractRoot Digest | External
-  deriving (Eq, Show)
+data Transaction = Transaction
+  { transactionNonce :: Integer
+  , gasPrice :: Integer
+  , gasLimit :: Integer
+  , transactionTarget :: Address
+  , transactionValue :: Integer
+  , transactionPayload :: ByteString
+  , transactionW :: Integer
+  , transactionR :: Integer
+  , transactionS :: Integer
+  } deriving (Show, Generic)
+
+data Receipt = Receipt
+  { receiptTransaction :: Transaction
+  , receiptState :: Digest
+  , receiptGas :: Integer
+  } deriving (Show, Generic)
 
 instance AsRLP Block
 instance AsRLP BlockHeader
-instance AsRLP StackFrame
 instance AsRLP Account
-
-instance AsRLP ContractInfo where
-  fromRLP (RLP.String bs) | BS.null bs = Just External
-  fromRLP item = ContractRoot <$> fromRLP item
-  toRLP (ContractRoot digest) = toRLP digest
-  toRLP External = RLP.String BS.empty
+instance AsRLP Transaction
+instance AsRLP Receipt
