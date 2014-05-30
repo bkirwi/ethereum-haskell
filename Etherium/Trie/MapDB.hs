@@ -24,5 +24,5 @@ instance Show a => Show (MapDB a) where
   show = show . runMapDB
 
 runMapDB :: MapDB a -> a
-runMapDB x = fst $ runState (getState x) $ Map.empty
+runMapDB x = evalState (getState x) Map.empty
 

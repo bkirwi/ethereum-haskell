@@ -45,10 +45,10 @@ instance Arbitrary (MapDB Ref) where
               newRef <- putNode $ Shortcut path $ Left ref
               normalize newRef
           node = do
-            refsM <- sequence $ replicate 16 $ anyNode (size `div` 8)
+            refsM <- replicateM 16 $ anyNode (size `div` 8)
             value <- arbitrary
             return $ do
-              refs <- sequence $ refsM
+              refs <- sequence refsM
               ref <- putNode $ Full (Seq.fromList refs) value
               normalize ref
 
@@ -150,7 +150,8 @@ spec = do
         return $ newRef `shouldBe` ref
 
   describe "Common test cases" $ testCommon "trietest" $ \test ->
-    it ("should hash to " ++ (show $ Digest $ expectation test) ++ " when all values are inserted") $ 
+    it ("should hash to " ++ show (Digest $ expectation test) ++ " when all values are inserted") $ 
+
       let result = runMapDB $ foldM insertPair (Literal Empty) $ inputs test 
           pack = T.encodeUtf8
           insertPair root (key, value) = insert root (pack key) (pack value)

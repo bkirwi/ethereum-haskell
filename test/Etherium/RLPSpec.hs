@@ -50,7 +50,7 @@ instance FromJSON RLP.Item where
   parseJSON (Number n) =
     let decodeNum :: Integer -> RLP.Item
         decodeNum = RLP.String . RLP.encodeInt 
-    in fmap decodeNum $ parseJSON (Number n)
+    in decodeNum <$> parseJSON (Number n)
 
 data RLPCase = RLPCase RLP.Item ByteString
 
@@ -96,13 +96,13 @@ spec = do
 
   it "should encode small bytes as themselves" $ property $ \byte ->
     let oneByte = BS.pack [byte]
-    in byte <= 0x7f ==> (RLP.encode $ RLP.String oneByte) `shouldBe` oneByte
+    in byte <= 0x7f ==> RLP.encode (RLP.String oneByte) `shouldBe` oneByte
 
   describe "handles example conversions" $ do
 
     "dog" `encodesTo` "\x83\&dog"
     
-    (RLP.List ["cat", "dog"]) `encodesTo` "\xc8\x83\&cat\x83\&dog"
+    RLP.List ["cat", "dog"] `encodesTo` "\xc8\x83\&cat\x83\&dog"
 
     "" `encodesTo` "\x80"
 
@@ -113,12 +113,12 @@ spec = do
     "\x04\x00" {-1024-} `encodesTo` "\x82\x04\x00"
 
     -- [ [], [[]], [ [], [[]] ] ]
-    (RLP.List [ (RLP.List [])
-              , (RLP.List [RLP.List []]) 
-              , (RLP.List [ (RLP.List []) 
-                          , (RLP.List [RLP.List []])
-                          ])
-              ]) 
+    RLP.List [ RLP.List []
+             , RLP.List [ RLP.List []] 
+             , RLP.List [ RLP.List [] 
+                        , RLP.List [RLP.List []]
+                        ]
+             ] 
       `encodesTo`
       "\xc7\xc0\xc1\xc0\xc3\xc0\xc1\xc0"
 

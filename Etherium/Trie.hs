@@ -1,6 +1,4 @@
-module Etherium.Trie
-  ( insert, lookup
-  , module ETI) where
+module Etherium.Trie (insert, lookup , module ETI) where
 
 import Prelude hiding (lookup)
 

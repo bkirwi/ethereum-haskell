@@ -134,7 +134,7 @@ insertPath (Shortcut nPath nVal) path bs = do
       newNode <- insertPath full suffix bs
       return $ Left newNode
   case (prefix, next) of
-    ([], Left newNode) -> return $ newNode
+    ([], Left newNode) -> return newNode
     (_, Left newNode) -> Shortcut prefix . Left <$> putNode newNode 
     (_, Right bs) -> return $ Shortcut prefix $ Right bs 
   where

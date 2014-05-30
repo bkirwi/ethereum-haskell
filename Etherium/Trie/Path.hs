@@ -1,4 +1,3 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Etherium.Trie.Path (Path, encodePath, decodePath) where
 
 import Control.Error
@@ -28,7 +27,7 @@ decodePath = fmap decodePair . BS.uncons
       let isTerminal = (firstByte .&. 0x20) == 0x20
           bodyPath = unpackWord4s body
           path = case firstByte .&. 0x10 of
-            0x10 -> (sndWord4 firstByte) : bodyPath
+            0x10 -> sndWord4 firstByte : bodyPath
             _ -> bodyPath
       in (isTerminal, path)
 

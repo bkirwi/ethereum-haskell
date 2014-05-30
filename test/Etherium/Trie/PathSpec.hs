@@ -28,18 +28,18 @@ instance FromJSON HexCase
 spec :: Spec
 spec = do
   it "should roundtrip paths" $ property $ \x y ->
-    (decodePath $ encodePath x y) `shouldBe` Just (x, y) 
+    decodePath (encodePath x y) `shouldBe` Just (x, y) 
 
   it "should recover the first nibble" $ property $ \x y ->
-    (fstWord4 $ x `packWord8` y) `shouldBe` x
+    fstWord4 (x `packWord8` y) `shouldBe` x
 
   it "should recover the second nibble" $ property $ \x y ->
-    (sndWord4 $ x `packWord8` y) `shouldBe` y
+    sndWord4 (x `packWord8` y) `shouldBe` y
 
   describe "performs example conversions" $ testCommon "hexencodetest" $ \test -> do
     it ("should encode to " ++ show (out test)) $
       let encoded = encodePath (term test) (seq test)
-      in encoded `shouldBe` (out test)
+      in encoded `shouldBe` out test
     it ("should decode " ++ show (out test)) $
       let decoded = decodePath (out test)
       in decoded `shouldBe` Just (term test, seq test)
