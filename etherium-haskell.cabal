@@ -91,3 +91,10 @@ library
   -- Base language which the package is written in.
   default-language:    Haskell2010
   
+executable etherium
+
+  main-is: Main.hs
+
+  build-depends: base
+
+  hs-source-dirs: exec
