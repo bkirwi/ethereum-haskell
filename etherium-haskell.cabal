@@ -96,5 +96,9 @@ executable etherium
   main-is: Main.hs
 
   build-depends: base
+               , bytestring
+               , network-simple
+               , pipes
+               , pipes-network == 0.6.*
 
   hs-source-dirs: exec
