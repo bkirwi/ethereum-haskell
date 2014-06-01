@@ -3,10 +3,9 @@
 module Etherium.Block() where
 
 import qualified Data.ByteString as BS
-import Data.ByteString(ByteString)
-import Data.Functor
 import GHC.Generics
 
+import Etherium.Prelude
 import qualified Etherium.RLP as RLP
 import Etherium.RLP.Convert
 import Etherium.Trie(Digest)
@@ -46,12 +45,12 @@ data Account = Account
   } deriving (Show, Generic)
 
 data Transaction = Transaction
-  { transactionNonce :: Integer
-  , gasPrice :: Integer
-  , gasLimit :: Integer
-  , transactionTarget :: Address
-  , transactionValue :: Integer
-  , transactionPayload :: ByteString
+  { transactionNonce :: Integer         -- ^ Tn
+  , gasPrice :: Integer                 -- ^ Tp
+  , gasLimit :: Integer                 -- ^ Tg
+  , transactionTarget :: Address        -- ^ Tt
+  , transactionValue :: Integer         -- ^ Tv
+  , transactionPayload :: ByteString    -- ^ Ti (initial code for contracts) or Td (data payload)
   , transactionW :: Integer
   , transactionR :: Integer
   , transactionS :: Integer
@@ -68,6 +67,8 @@ instance AsRLP BlockHeader
 instance AsRLP Account
 instance AsRLP Transaction
 instance AsRLP Receipt
+
+type AccountDB a = DB Address Account a
 
 nextDifficulty :: BlockHeader
               -> Timestamp
@@ -86,7 +87,7 @@ nextGasLimit parent = max limit 10000
 
 proofOfWork :: BlockHeader
             -> Integer
-proofOfWork = error "not implemented" -- yellow paper S 11.5
+proofOfWork = error "Section 11.5"
 
 isValidBlock :: BlockHeader
              -> BlockHeader
@@ -99,3 +100,18 @@ isValidBlock parent current =
      blockGasLimit current == nextGasLimit parent &&
      timestamp > blockTimestamp parent &&
      BS.length (extraData current) <= 1024
+
+dataFee, transactionFee :: Integer
+transactionFee = 500
+dataFee = 5
+
+isValidTransaction :: Account -> Transaction -> Bool
+isValidTransaction sender t = 
+  let dataSize = fromIntegral . BS.length $ transactionPayload t
+      intrinsicGas = dataFee * dataSize + transactionFee -- g0
+      v0 = gasLimit t * gasPrice t + transactionValue t
+      isValidSignature = True -- Appendix F
+  in transactionNonce t == accountNonce sender &&
+     intrinsicGas <= gasLimit t &&
+     v0 <= accountBalance sender &&
+     isValidSignature
