@@ -1,28 +1,23 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Etherium.Trie.MapDB (
-  MapDB, runMapDB,
+  MapDB, runMapDB
   ) where
 
 import Control.Monad.State
 import qualified Data.Map as Map
 
 import Etherium.Prelude
-import Etherium.Trie
 
-newtype MapDB a = MapDB { getState :: State (Map Digest Node) a }
-  deriving (Functor, Applicative, Monad)
+type MapDB k v a = StateT (Map k v) Maybe a
 
-instance DB MapDB where
-  getDB key = MapDB $ 
-    let getNode = fromMaybe Empty . Map.lookup key
-    in get >>= return . getNode
-  putDB key value = MapDB $ 
-    let putNode = Map.insert key value
-    in get >>= return . putNode >>= put
-
-instance Show a => Show (MapDB a) where
-  show = show . runMapDB
-
-runMapDB :: MapDB a -> a
-runMapDB x = evalState (getState x) Map.empty
-
+runMapDB :: Ord k => DB k v a -> MapDB k v a 
+runMapDB = runDB putDB getDB
+  where
+    getDB key = do
+      map <- get
+      let value = Map.lookup key map
+      lift value
+    putDB key value = do
+      map <- get
+      let newMap = Map.insert key value map
+      put newMap

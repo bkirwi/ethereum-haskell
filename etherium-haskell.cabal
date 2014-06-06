@@ -82,6 +82,7 @@ library
                      , containers
                      , attoparsec
                      , cryptohash
+                     , free
                      , mtl
                      , errors
         
@@ -98,7 +99,8 @@ executable etherium
   build-depends: base
                , bytestring
                , network-simple
-               , pipes
+               , pipes == 4.*
+               , pipes-safe == 2.*
                , pipes-network == 0.6.*
 
   hs-source-dirs: exec

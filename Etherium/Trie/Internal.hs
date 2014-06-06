@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Etherium.Trie.Internal
-  ( DB(..), Digest(..)
+  ( NodeDB, Digest(..)
   , getNode, putNode
   , lookupPath
   , insertRef, insertPath
@@ -70,25 +70,23 @@ instance AsRLP Node where
     val <- fromRLP $ last many
     return $ Full (Seq.fromList refs) val
 
-class (Functor m, Monad m) => DB m where
-  getDB :: Digest -> m Node
-  putDB :: Digest -> Node -> m ()
+type NodeDB = DB Digest Node
 
-putNode :: DB m => Node -> m Ref
+putNode :: Node -> NodeDB Ref
 putNode node =
   let bytes = RLP.encode $ toRLP node
       digest = Digest $ SHA3.hash 256 bytes
   in if BS.length bytes < 32
     then return $ Literal node
     else do
-      putDB digest node 
+      insertDB digest node 
       return $ Hash digest
 
-getNode :: DB m => Ref -> m Node
-getNode (Hash d) = getDB d
+getNode :: Ref -> NodeDB Node
+getNode (Hash d) = lookupDB d
 getNode (Literal n) = return n
             
-lookupPath :: DB m => Ref -> Path -> m ByteString
+lookupPath :: Ref -> Path -> NodeDB ByteString
 lookupPath root path = getNode root >>= getVal
   where
     getVal Empty = return BS.empty
@@ -107,7 +105,7 @@ lookupPath root path = getNode root >>= getVal
 emptyRefs = Seq.replicate 16 $ Literal Empty
 emptyRef = Literal Empty
 
-toFull :: DB m => Node -> m Node
+toFull :: Node -> NodeDB Node
 toFull Empty = return $ Full emptyRefs BS.empty
 toFull f@(Full _ _) = return f
 toFull (Shortcut [] (Left ref)) = getNode ref >>= toFull
@@ -117,7 +115,7 @@ toFull (Shortcut (p:ps) val) = do
   let newRefs = Seq.update (word4toInt p) ref emptyRefs 
   return $ Full newRefs BS.empty
 
-insertPath :: DB m => Node -> Path -> ByteString -> m Node
+insertPath :: Node -> Path -> ByteString -> NodeDB Node
 insertPath Empty path bs 
   | BS.null bs = return Empty
   | otherwise = return $ Shortcut path $ Right bs
@@ -153,17 +151,17 @@ insertPath (Full refs val) (p:ps) bs = do
   let newRefs = Seq.update index newRef refs
   return $ Full newRefs val
   
-insertRef :: DB m => Ref -> Path -> ByteString -> m Ref
+insertRef :: Ref -> Path -> ByteString -> NodeDB Ref
 insertRef ref path bs = do
   node <- getNode ref
   newNode <- insertPath node path bs
   newRef <- putNode newNode
   normalize newRef
 
-normalize :: DB m => Ref -> m Ref
+normalize :: Ref -> NodeDB Ref
 normalize ref = getNode ref >>= nrml >>= putNode
   where
-    nrml :: DB m => Node -> m Node
+    nrml :: Node -> NodeDB Node
     nrml Empty = return Empty
     nrml (Shortcut [] (Left ref)) = getNode ref >>= nrml
     nrml (Shortcut path (Left ref)) = do
