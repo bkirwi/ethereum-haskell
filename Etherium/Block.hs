@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Etherium.Block() where
+module Etherium.Block(Block, BlockHeader, Account, Transaction) where
 
 import qualified Data.ByteString as BS
 import GHC.Generics
