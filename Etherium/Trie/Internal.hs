@@ -41,34 +41,38 @@ data Node = Empty
   deriving (Show, Eq)
 
 instance AsRLP Ref where
-  toRLP (Hash h) = toRLP h
-  toRLP (Literal l) = toRLP l
-  fromRLP rlp = do
-    bytes <- fromRLP rlp
-    if BS.length bytes < 32 
-      then hush (RLP.decode bytes) >>= fromRLP
-      else return . Hash . Digest $ bytes
+  asRLP = RLPConvert to from
+    where
+      to (Hash h) = toRLP h
+      to (Literal l) = toRLP l
+      from rlp = do
+        bytes <- fromRLP rlp
+        if BS.length bytes < 32 
+          then hush (RLP.decode bytes) >>= fromRLP
+          else return . Hash . Digest $ bytes
 
 instance AsRLP Node where
-  toRLP Empty = toRLP BS.empty
-  toRLP (Shortcut path (Right val)) = toRLP [encodePath True path, val]
-  toRLP (Shortcut path (Left ref)) = toRLP [toRLP $ encodePath False path, toRLP ref]
-  toRLP (Full refs val) = toRLP (fmap toRLP refs <> Seq.singleton (toRLP val))
-  fromRLP (RLP.String bs)
-    | BS.null bs = Just Empty
-    | otherwise = Nothing
-  fromRLP (RLP.List [pathItem, targetItem]) = do
-    pathBS <- fromRLP pathItem
-    (isTerminal, path) <- decodePath pathBS
-    target <-
-      if isTerminal then Right <$> fromRLP targetItem 
-      else Left <$> fromRLP targetItem
-    return $ Shortcut path target 
-  fromRLP (RLP.List many) = do
-    guard $ length many == 17 
-    refs <- mapM fromRLP $ init many 
-    val <- fromRLP $ last many
-    return $ Full (Seq.fromList refs) val
+  asRLP = RLPConvert to from
+    where
+      to Empty = toRLP BS.empty
+      to (Shortcut path (Right val)) = toRLP [encodePath True path, val]
+      to (Shortcut path (Left ref)) = toRLP [toRLP $ encodePath False path, toRLP ref]
+      to (Full refs val) = toRLP (fmap toRLP refs <> Seq.singleton (toRLP val))
+      from (RLP.String bs)
+        | BS.null bs = Just Empty
+        | otherwise = Nothing
+      from (RLP.List [pathItem, targetItem]) = do
+        pathBS <- fromRLP pathItem
+        (isTerminal, path) <- decodePath pathBS
+        target <-
+          if isTerminal then Right <$> fromRLP targetItem 
+          else Left <$> fromRLP targetItem
+        return $ Shortcut path target 
+      from (RLP.List many) = do
+        guard $ length many == 17 
+        refs <- mapM fromRLP $ init many 
+        val <- fromRLP $ last many
+        return $ Full (Seq.fromList refs) val
 
 type NodeDB = DB Digest Node
 

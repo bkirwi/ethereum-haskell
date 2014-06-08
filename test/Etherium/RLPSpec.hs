@@ -77,9 +77,9 @@ data Union = OneU One
 instance AsRLP Empty
 instance AsRLP Single
 instance AsRLP Many
-instance AsRLP One where tag = tagInt 0
-instance AsRLP Other where tag = tagInt 1
-instance AsRLP Union
+instance AsRLP One where asRLP = tagged 0
+instance AsRLP Other where asRLP = tagged 1
+instance AsRLP Union where asRLP = basic
 
 spec :: Spec
 spec = do
@@ -135,8 +135,8 @@ spec = do
     it "encodes an empty constructor as the empty list" $
       Empty `convertsTo` RLP.List []
 
-    it "encodes a single-element constructor as that value" $ property $ \bs ->
-      Single bs `convertsTo` toRLP bs
+    it "encodes a single-element constructor as a singleton list" $ property $ \bs ->
+      Single bs `convertsTo` toRLP [bs]
 
     it "encodes a product as a list" $ property $ \bs0 bs1 ->
       Many bs0 bs1 `convertsTo` toRLP [bs0, bs1]

@@ -26,7 +26,7 @@ data Payload =
   | GetChainP GetChain
   deriving (Show, Generic)
 
-instance AsRLP Payload
+instance AsRLP Payload where asRLP = basic
 
 data Hello = Hello
   { protocolVersion :: Int
@@ -37,7 +37,7 @@ data Hello = Hello
   , nodeId :: ByteString
   } deriving (Show, Generic)
 
-instance AsRLP Hello where tag = tagInt 0x00
+instance AsRLP Hello where asRLP = tagged 0x00
 
 data DisconnectReason = 
     DisconnectRequested
@@ -51,33 +51,36 @@ data DisconnectReason =
   | ClientQuitting
   deriving (Show, Enum, Bounded)
 
-data Disconnect = Disconnect DisconnectReason
-  deriving (Show)
+maybeReason :: Int -> Maybe DisconnectReason
+maybeReason n 
+  | min <= n && n <= max = Just $ toEnum n
+  | otherwise = Nothing
+  where
+    min = fromEnum (minBound :: DisconnectReason)
+    max = fromEnum (maxBound :: DisconnectReason)
 
-instance AsRLP Disconnect where 
-  toRLP (Disconnect reason) = toRLP [0x01, fromEnum reason]
-  fromRLP (RLP.List [tag,reason]) = do
-    0x01 :: Int <- fromRLP tag
-    enum <- fromRLP reason
-    guard $ enum >= fromEnum (minBound :: DisconnectReason)
-    guard $ enum <= fromEnum (maxBound :: DisconnectReason)
-    return . Disconnect $ toEnum enum
-  fromRLP _ = Nothing
+instance AsRLP DisconnectReason where
+  asRLP = RLPConvert (toRLP . fromEnum) (maybeReason <=< fromRLP)
+
+data Disconnect = Disconnect DisconnectReason
+  deriving (Show, Generic)
+
+instance AsRLP Disconnect where asRLP = tagged 0x01
 
 data Ping = Ping deriving (Show, Generic)
 
-instance AsRLP Ping where tag = tagInt 0x02
+instance AsRLP Ping where asRLP = tagged 0x02
 
 data Pong = Pong deriving (Show, Generic)
 
-instance AsRLP Pong where tag = tagInt 0x03
+instance AsRLP Pong where asRLP = tagged 0x03
 
 
 -- 'Information'
 
 data GetPeers = GetPeers deriving (Show, Generic)
 
-instance AsRLP GetPeers where tag = tagInt 0x10
+instance AsRLP GetPeers where asRLP = tagged 0x10
 
 data Peer = Peer
   { peerAddress :: ByteString
@@ -89,27 +92,29 @@ instance AsRLP Peer
 
 data Peers = Peers [Peer] deriving (Show, Generic)
 
-instance AsRLP Peers where tag = tagInt 0x11
+instance AsRLP Peers where asRLP = basicTagged 0x11
 
 data Transactions = Transactions [Transaction] deriving (Show, Generic)
 
-instance AsRLP Transactions where tag = tagInt 0x12
+instance AsRLP Transactions where asRLP = basicTagged 0x12
 
 data Blocks = Blocks [Block] deriving (Show, Generic)
 
-instance AsRLP Blocks where tag = tagInt 0x13
+instance AsRLP Blocks where asRLP = basicTagged 0x13
 
 data GetChain = GetChain [Digest] Int deriving (Show, Generic)
 
 instance AsRLP GetChain where
-  toRLP (GetChain digests count) =
-    let digestRLP = map toRLP digests
-        list = [toRLP (0x14 :: Int)] ++ digestRLP ++ [toRLP count]
-    in toRLP list
-  fromRLP (RLP.List (tag:rest)) = do
-    0x14 :: Int <- fromRLP tag
-    guard $ not $ null rest
-    digests <- mapM fromRLP $ init rest
-    count <- fromRLP $ last rest
-    return $ GetChain digests count
-  fromRLP _ = Nothing  
+  asRLP = withTag 0x14 convertGet
+    where
+      convertGet = RLPConvert toX fromX
+      toX (GetChain digests count) =
+        let digestRLP = map toRLP digests
+            list = digestRLP ++ [toRLP count]
+        in toRLP list
+      fromX (RLP.List rest) = do
+        guard $ not $ null rest
+        digests <- mapM fromRLP $ init rest
+        count <- fromRLP $ last rest
+        return $ GetChain digests count
+      fromX _ = Nothing  
