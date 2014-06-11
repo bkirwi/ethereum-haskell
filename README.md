@@ -1,7 +1,7 @@
-etherium-haskell
+ethereum-haskell
 ===
 
-An independent and unaffiliated reimplementation of Etherium in Haskell.
+An independent and unaffiliated reimplementation of Ethereum in Haskell.
 
 This is still in the early stages; many parts of the protocol are
 unimplemented, and there is very little documentation. However, the RLP

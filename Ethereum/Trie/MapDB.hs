@@ -1,12 +1,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Etherium.Trie.MapDB (
+module Ethereum.Trie.MapDB (
   MapDB, runMapDB
   ) where
 
 import Control.Monad.State
 import qualified Data.Map as Map
 
-import Etherium.Prelude
+import Ethereum.Prelude
 
 type MapDB k v a = StateT (Map k v) Maybe a
 

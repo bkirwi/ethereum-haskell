@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
-module Etherium.RLPSpec(spec, One(..), Other(..), Union(..)) where
+module Ethereum.RLPSpec(spec, One(..), Other(..), Union(..)) where
 
 import Control.Applicative
 import Data.Aeson as A
@@ -15,13 +15,13 @@ import Data.Text(Text)
 import Data.Text.Encoding(encodeUtf8)
 import GHC.Generics
 
-import qualified Etherium.RLP as RLP
-import Etherium.RLP.Convert
+import qualified Ethereum.RLP as RLP
+import Ethereum.RLP.Convert
 
 import Test.Hspec
 import Test.QuickCheck
 import Data.String(IsString, fromString)
-import Etherium.Testing
+import Ethereum.Testing
 
 instance IsString RLP.Item where
   fromString = RLP.String . fromString

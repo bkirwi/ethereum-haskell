@@ -1,5 +1,5 @@
 -- The name of the package.
-name:                etherium-haskell
+name:                ethereum
 
 -- The package version.  See the Haskell package versioning policy (PVP) 
 -- for standards guiding when and how versions should be incremented.
@@ -10,7 +10,7 @@ name:                etherium-haskell
 version:             0.1.0.0
 
 -- A short (one-line) description of the package.
-synopsis:            Etherium in Haskell
+synopsis:            Ethereum in Haskell
 
 -- A longer description of the package.
 -- description:         
@@ -48,7 +48,7 @@ test-suite test
   main-is: Spec.hs
   build-depends: base, Cabal >= 1.8
                , hspec
-               , etherium-haskell
+               , ethereum
                , bytestring
                , containers
                , mtl
@@ -60,15 +60,15 @@ test-suite test
 
 library
   -- Modules exported by the library.
-  exposed-modules: Etherium.Block
-                 , Etherium.Prelude
-                 , Etherium.RLP
-                 , Etherium.RLP.Convert   
-                 , Etherium.Trie
-                 , Etherium.Trie.Internal
-                 , Etherium.Trie.MapDB
-                 , Etherium.Trie.Path
-                 , Etherium.Wire
+  exposed-modules: Ethereum.Block
+                 , Ethereum.Prelude
+                 , Ethereum.RLP
+                 , Ethereum.RLP.Convert   
+                 , Ethereum.Trie
+                 , Ethereum.Trie.Internal
+                 , Ethereum.Trie.MapDB
+                 , Ethereum.Trie.Path
+                 , Ethereum.Wire
   
   -- Modules included in this library but not exported.
   -- other-modules:       
@@ -92,7 +92,7 @@ library
   -- Base language which the package is written in.
   default-language:    Haskell2010
   
-executable etherium
+executable ethereum
 
   main-is: Main.hs
 

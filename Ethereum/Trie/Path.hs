@@ -1,10 +1,10 @@
-module Etherium.Trie.Path (Path, encodePath, decodePath) where
+module Ethereum.Trie.Path (Path, encodePath, decodePath) where
 
 import Control.Error
 import Data.Bits
 import qualified Data.ByteString as BS
 
-import Etherium.Prelude
+import Ethereum.Prelude
 
 type Path = [Word4]
 

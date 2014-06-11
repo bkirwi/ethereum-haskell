@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DeriveGeneric #-}
-module Etherium.TrieSpec(spec) where
+module Ethereum.TrieSpec(spec) where
 
 import Prelude hiding (lookup)
 import Control.Monad
@@ -16,14 +16,14 @@ import qualified Data.Text.Encoding as T
 import Data.Text (Text)
 import GHC.Generics (Generic)
 
-import Etherium.Prelude
-import Etherium.Trie
-import Etherium.Trie.Internal
-import Etherium.Trie.MapDB
+import Ethereum.Prelude
+import Ethereum.Trie
+import Ethereum.Trie.Internal
+import Ethereum.Trie.MapDB
 
 import Test.Hspec
 import Test.QuickCheck
-import Etherium.Testing
+import Ethereum.Testing
 
 instance Arbitrary (NodeDB Ref) where
   arbitrary = sized anyNode

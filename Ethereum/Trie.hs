@@ -1,12 +1,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Etherium.Trie (Trie, Digest, runTrie) where
+module Ethereum.Trie (Trie, Digest, runTrie) where
 
 import Prelude hiding (lookup)
 
 import Control.Monad.State
 
-import Etherium.Prelude
-import Etherium.Trie.Internal as ETI
+import Ethereum.Prelude
+import Ethereum.Trie.Internal as ETI
 
 insert :: Ref -> ByteString -> ByteString -> NodeDB Ref
 insert ref key val = insertRef ref (unpackWord4s key) val

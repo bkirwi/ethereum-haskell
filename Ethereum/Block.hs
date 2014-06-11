@@ -1,14 +1,14 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Etherium.Block(Block, BlockHeader, Account, Transaction) where
+module Ethereum.Block(Block, BlockHeader, Account, Transaction) where
 
 import qualified Data.ByteString as BS
 import GHC.Generics
 
-import Etherium.Prelude
-import qualified Etherium.RLP as RLP
-import Etherium.RLP.Convert
-import Etherium.Trie(Digest)
+import Ethereum.Prelude
+import qualified Ethereum.RLP as RLP
+import Ethereum.RLP.Convert
+import Ethereum.Trie(Digest)
 
 newtype Address = Address ByteString
   deriving (Show, AsRLP)

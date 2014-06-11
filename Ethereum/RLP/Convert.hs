@@ -1,5 +1,5 @@
 {-# LANGUAGE DefaultSignatures, DeriveGeneric, TypeOperators, FlexibleContexts #-}
-module Etherium.RLP.Convert(AsRLP, toRLP, fromRLP, asRLP, tagged, basic, general, basicTagged, withTag, RLPConvert(..)) where
+module Ethereum.RLP.Convert(AsRLP, toRLP, fromRLP, asRLP, tagged, basic, general, basicTagged, withTag, RLPConvert(..)) where
 
 import Control.Applicative
 import qualified Data.ByteString as BS
@@ -12,7 +12,7 @@ import qualified Data.Sequence as Seq
 import Data.Foldable(toList)
 import GHC.Generics
 
-import Etherium.RLP
+import Ethereum.RLP
 
 data RLPConvert a = RLPConvert { convertToRLP :: a -> Item, convertFromRLP :: Item -> Maybe a }
 

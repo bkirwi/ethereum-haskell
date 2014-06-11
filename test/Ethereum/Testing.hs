@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Etherium.Testing(testCommon) where
+module Ethereum.Testing(testCommon) where
 
 import Data.Aeson as A
 import qualified Data.ByteString as BS
@@ -9,8 +9,8 @@ import Data.HashMap.Strict(toList)
 import qualified Data.Text as T
 import System.IO.Unsafe(unsafePerformIO) -- Sorry!
 
-import Etherium.Prelude
-import Etherium.Trie.Path
+import Ethereum.Prelude
+import Ethereum.Trie.Path
 
 import Test.Hspec
 import Test.QuickCheck

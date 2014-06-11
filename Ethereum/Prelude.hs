@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Etherium.Prelude
+module Ethereum.Prelude
   ( Word4, word4to8, packWord8, fstWord4, sndWord4, word4toInt, unpackWord4s
   , ByteString, Word8, Map
   , DB, insertDB, lookupDB, runDB

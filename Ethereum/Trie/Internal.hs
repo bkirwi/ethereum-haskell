@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Etherium.Trie.Internal
+module Ethereum.Trie.Internal
   ( NodeDB, Digest(..)
   , getNode, putNode
   , lookupPath
@@ -21,10 +21,10 @@ import Data.Map(Map)
 import qualified Data.Sequence as Seq
 import Data.Sequence(Seq)
 
-import Etherium.Prelude
-import qualified Etherium.RLP as RLP
-import Etherium.RLP.Convert
-import Etherium.Trie.Path
+import Ethereum.Prelude
+import qualified Ethereum.RLP as RLP
+import Ethereum.RLP.Convert
+import Ethereum.Trie.Path
 
 newtype Digest = Digest ByteString
   deriving (Ord, Eq, AsRLP)

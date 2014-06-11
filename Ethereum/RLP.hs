@@ -1,4 +1,4 @@
-module Etherium.RLP(Item(String, List), encode, decode, encodeInt, decodeInt) where
+module Ethereum.RLP(Item(String, List), encode, decode, encodeInt, decodeInt) where
 
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)

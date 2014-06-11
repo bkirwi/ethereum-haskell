@@ -1,18 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
-module Etherium.Trie.PathSpec(spec) where
+module Ethereum.Trie.PathSpec(spec) where
 
 import Prelude hiding (seq)
 import Data.Aeson
 import qualified Data.ByteString as BS
 import GHC.Generics
 
-import Etherium.Prelude
-import Etherium.Trie.Path
+import Ethereum.Prelude
+import Ethereum.Trie.Path
 
 import Test.Hspec
 import Test.QuickCheck
-import Etherium.Testing
+import Ethereum.Testing
 
 data HexCase = HexCase
   { seq :: Path

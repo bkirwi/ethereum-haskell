@@ -1,16 +1,16 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module Etherium.Wire() where
+module Ethereum.Wire() where
 
 import Control.Monad
 import qualified Data.ByteString as BS
 import GHC.Generics
 
-import Etherium.Prelude
-import Etherium.Block
-import Etherium.RLP.Convert
-import qualified Etherium.RLP as RLP
-import Etherium.Trie(Digest)
+import Ethereum.Prelude
+import Ethereum.Block
+import Ethereum.RLP.Convert
+import qualified Ethereum.RLP as RLP
+import Ethereum.Trie(Digest)
 
 -- 'Session control'
 
