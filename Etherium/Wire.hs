@@ -24,6 +24,8 @@ data Payload =
   | TransactionsP Transactions
   | BlocksP Blocks
   | GetChainP GetChain
+  | NotInChainP NotInChain
+  | GetTransactionsP GetTransactions
   deriving (Show, Generic)
 
 instance AsRLP Payload where asRLP = basic
@@ -118,3 +120,11 @@ instance AsRLP GetChain where
         count <- fromRLP $ last rest
         return $ GetChain digests count
       fromX _ = Nothing  
+
+data NotInChain = NotInChain Digest deriving (Show, Generic)
+
+instance AsRLP NotInChain where asRLP = tagged 0x15
+
+data GetTransactions = GetTransactions deriving (Show, Generic)
+
+instance AsRLP GetTransactions where asRLP = tagged 0x16
