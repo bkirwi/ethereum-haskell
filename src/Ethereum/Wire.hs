@@ -1,18 +1,19 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module Ethereum.Wire() where
+module Ethereum.Wire(
+    parseMessage, buildMessage
+  ) where
 
 import Control.Monad
 import qualified Data.ByteString as BS
 import GHC.Generics
+import Data.Attoparsec.ByteString as A
 
 import Ethereum.Prelude
 import Ethereum.Block
 import Ethereum.RLP.Convert
 import qualified Ethereum.RLP as RLP
 import Ethereum.Trie(Digest)
-
--- 'Session control'
 
 data Payload = 
     HelloP Hello
@@ -29,6 +30,8 @@ data Payload =
   deriving (Show, Generic)
 
 instance AsRLP Payload where asRLP = basic
+
+-- 'Session control'
 
 data Hello = Hello
   { protocolVersion :: Int
@@ -128,3 +131,24 @@ instance AsRLP NotInChain where asRLP = tagged 0x15
 data GetTransactions = GetTransactions deriving (Show, Generic)
 
 instance AsRLP GetTransactions where asRLP = tagged 0x16
+
+
+-- Serialization
+
+serializationToken :: ByteString
+serializationToken = BS.pack [0x22, 0x40, 0x08, 0x91]
+
+parseMessage :: A.Parser ByteString
+parseMessage = do
+  A.string serializationToken
+  sizeBytes <- A.take 4
+  let size = RLP.decodeInt sizeBytes
+  A.take size
+
+buildMessage :: ByteString -> ByteString
+buildMessage body =
+  let size = RLP.encodeInt $ BS.length body
+      padding = 4 - BS.length size
+      paddedSize = BS.replicate padding 0x00 <> size
+  in serializationToken <> paddedSize <> body
+      
