@@ -66,7 +66,7 @@ parseItem = do
   case typeBits of
     0x80 -> withSize 0x80 parseString
     0xc0 -> withSize 0xc0 parseList
-    otherwise -> return (1, String $ BS.singleton first)
+    _ -> return (1, String $ BS.singleton first)
 
 decode :: ByteString -> Either String Item
 decode = parseOnly (snd <$> parseItem)

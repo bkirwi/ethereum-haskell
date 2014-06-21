@@ -2,6 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Ethereum.Wire(
     parseMessage, buildMessage
+  , Payload(..), Hello(..), Disconnect(..)
   ) where
 
 import Control.Monad
@@ -37,8 +38,8 @@ data Hello = Hello
   { protocolVersion :: Int
   , networkId :: Int
   , clientId :: ByteString
-  , listenPort :: Int
   , capabilities :: Int
+  , listenPort :: Int
   , nodeId :: ByteString
   } deriving (Show, Generic)
 

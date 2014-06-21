@@ -2,11 +2,7 @@
 module Ethereum.RLP.Convert(AsRLP, toRLP, fromRLP, asRLP, tagged, basic, general, basicTagged, withTag, RLPConvert(..)) where
 
 import Control.Applicative
-import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
-import Data.Char(ord)
-import Data.Word(Word8)
-import Data.Monoid
 import Data.Functor
 import qualified Data.Sequence as Seq
 import Data.Foldable(toList)
