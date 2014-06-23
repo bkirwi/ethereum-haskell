@@ -1,5 +1,6 @@
 module Ethereum.RLP(Item(String, List), encode, decode, encodeInt, decodeInt) where
 
+import Control.Error
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
 import Data.Monoid
@@ -68,5 +69,5 @@ parseItem = do
     0xc0 -> withSize 0xc0 parseList
     _ -> return (1, String $ BS.singleton first)
 
-decode :: ByteString -> Either String Item
-decode = parseOnly (snd <$> parseItem)
+decode :: ByteString -> Maybe Item
+decode bs = hush $ parseOnly (snd <$> parseItem) bs

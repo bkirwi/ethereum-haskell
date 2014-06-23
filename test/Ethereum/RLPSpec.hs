@@ -92,7 +92,7 @@ spec = do
     it "should encode 1024" $ RLP.encodeInt 1024 `shouldBe` "\x04\x00"
 
   it "should decode what it encodes" $ property $ \rlp ->
-    (RLP.decode . RLP.encode $ rlp) `shouldBe` Right rlp
+    (RLP.decode . RLP.encode $ rlp) `shouldBe` Just rlp
 
   it "should encode small bytes as themselves" $ property $ \byte ->
     let oneByte = BS.pack [byte]
@@ -158,4 +158,4 @@ spec = do
       it ("should encode " <> show input <> " as " <> show output) $ 
         RLP.encode input `shouldBe` output
       it ("should decode " <> show output <> " to " <> show input) $ 
-        RLP.decode output `shouldBe` Right input
+        RLP.decode output `shouldBe` Just input

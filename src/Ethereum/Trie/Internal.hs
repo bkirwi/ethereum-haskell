@@ -10,7 +10,6 @@ module Ethereum.Trie.Internal
   ) where
 
 import qualified Crypto.Hash.SHA3 as SHA3
-import Control.Error
 import Control.Monad.State
 import qualified Data.ByteString as BS
 import Data.Char (intToDigit)
@@ -48,7 +47,7 @@ instance AsRLP Ref where
       from rlp = do
         bytes <- fromRLP rlp
         if BS.length bytes < 32 
-          then hush (RLP.decode bytes) >>= fromRLP
+          then RLP.decode bytes >>= fromRLP
           else return . Hash . Digest $ bytes
 
 instance AsRLP Node where
