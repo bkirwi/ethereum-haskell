@@ -37,8 +37,10 @@ encodeInt = BS.reverse <$> BS.unfoldr nextByte
     nextByte 0 = Nothing
     nextByte n = Just (fromIntegral n, n `quot` 256)
 
-decodeInt :: Integral n => ByteString -> n
-decodeInt = BS.foldl addByte 0 
+decodeInt :: Integral n => ByteString -> Maybe n
+decodeInt bs 
+  | not (BS.null bs) && BS.head bs == 0 = Nothing
+  | otherwise = Just $ BS.foldl addByte 0 bs
   where
     addByte n b = (n * 256) + fromIntegral b
       
@@ -60,7 +62,7 @@ parseItem = do
         | otherwise = do
           let lenLen = lenBits - 55
           bytes <- ABS.take lenLen
-          let len = decodeInt bytes
+          len <- justZ $ decodeInt bytes
           ret <- parser len
           return (1 + lenLen + len, ret)
         where lenBits = fromIntegral $ first - offset
@@ -70,4 +72,9 @@ parseItem = do
     _ -> return (1, String $ BS.singleton first)
 
 decode :: ByteString -> Maybe Item
-decode bs = hush $ parseOnly (snd <$> parseItem) bs
+decode bs = hush $ parseOnly (snd <$> parser) bs
+  where
+    parser = do
+      a <- parseItem
+      ABS.endOfInput
+      return a

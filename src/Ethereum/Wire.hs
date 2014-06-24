@@ -5,10 +5,11 @@ module Ethereum.Wire(
   , Payload(..), Hello(..), Disconnect(..)
   ) where
 
+import Control.Error
 import Control.Monad
 import qualified Data.ByteString as BS
 import GHC.Generics
-import Data.Attoparsec.ByteString as A
+import qualified Data.Attoparsec.ByteString as A
 
 import Ethereum.Prelude
 import Ethereum.Block
@@ -141,9 +142,9 @@ serializationToken = BS.pack [0x22, 0x40, 0x08, 0x91]
 
 parseMessage :: A.Parser ByteString
 parseMessage = do
-  A.string serializationToken
+  _ <- A.string serializationToken
   sizeBytes <- A.take 4
-  let size = RLP.decodeInt sizeBytes
+  size <- justZ $ RLP.decodeInt $ BS.dropWhile (==0) sizeBytes
   A.take size
 
 buildMessage :: ByteString -> ByteString

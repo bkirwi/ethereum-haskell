@@ -85,7 +85,12 @@ spec :: Spec
 spec = do
 
   it "should decode what it encodes (ints)" $ property $ \n ->
-    (n :: Int) >= 0 ==> (RLP.decodeInt . RLP.encodeInt $ n) `shouldBe` n
+    (n :: Int) >= 0 ==> (RLP.decodeInt . RLP.encodeInt $ n) `shouldBe` Just n
+
+  it "fails to decode zero-prefixed integers" $ property $ \n padding ->
+    padding > 0  && n >= 0 ==>
+      let padded = BS.replicate padding 0 <> RLP.encodeInt (n :: Int)
+      in RLP.decodeInt padded `shouldBe` Nothing
 
   describe "handle example integer conversions" $ do
     it "should encode 15" $ RLP.encodeInt 15 `shouldBe` "\x0f"
@@ -95,8 +100,19 @@ spec = do
     (RLP.decode . RLP.encode $ rlp) `shouldBe` Just rlp
 
   it "should encode small bytes as themselves" $ property $ \byte ->
-    let oneByte = BS.pack [byte]
-    in byte <= 0x7f ==> RLP.encode (RLP.String oneByte) `shouldBe` oneByte
+    byte < 0x80 ==> 
+      let oneByte = BS.pack [byte]
+      in RLP.encode (RLP.String oneByte) `shouldBe` oneByte
+
+  it "fails to decode truncated values" $ property $ \rlp n ->
+    let serialized = RLP.encode rlp
+        len = BS.length serialized
+    in n >= 0 && n < len && len > 0 ==>
+        RLP.decode (BS.take n serialized) `shouldBe` Nothing
+
+  it "fails to decode padded values" $ property $ \rlp padding ->
+    BS.length padding > 0 ==>
+      RLP.decode (RLP.encode rlp <> padding) `shouldBe` Nothing
 
   describe "handles example conversions" $ do
 

@@ -3,7 +3,6 @@ module Ethereum.RLP.Convert(AsRLP, toRLP, fromRLP, asRLP, tagged, basic, general
 
 import Control.Applicative
 import Data.ByteString (ByteString)
-import Data.Functor
 import qualified Data.Sequence as Seq
 import Data.Foldable(toList)
 import GHC.Generics
@@ -81,7 +80,7 @@ instance AsRLP a => AsRLP (Seq.Seq a) where
 instance AsRLP Integer where
   asRLP = RLPConvert toRLP fromRLP
     where
-      fromRLP (String s) = Just $ decodeInt s
+      fromRLP (String s) = decodeInt s
       fromRLP (List _) = Nothing
       toRLP n
         | n >= 0 = String $ encodeInt n
@@ -90,7 +89,7 @@ instance AsRLP Integer where
 instance AsRLP Int where
   asRLP = RLPConvert toRLP fromRLP
     where
-      fromRLP (String s) = Just $ decodeInt s
+      fromRLP (String s) = decodeInt s
       fromRLP (List _) = Nothing
       toRLP n
         | n >= 0 = String $ encodeInt n
