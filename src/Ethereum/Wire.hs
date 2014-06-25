@@ -31,7 +31,7 @@ data Payload =
   | GetTransactionsP GetTransactions
   deriving (Show, Generic)
 
-instance AsRLP Payload where asRLP = basic
+instance RLP.Convert Payload where asRLP = basic
 
 -- 'Session control'
 
@@ -44,7 +44,7 @@ data Hello = Hello
   , nodeId :: ByteString
   } deriving (Show, Generic)
 
-instance AsRLP Hello where asRLP = tagged 0x00
+instance RLP.Convert Hello where asRLP = tagged 0x00
 
 data DisconnectReason = 
     DisconnectRequested
@@ -66,28 +66,28 @@ maybeReason n
     min = fromEnum (minBound :: DisconnectReason)
     max = fromEnum (maxBound :: DisconnectReason)
 
-instance AsRLP DisconnectReason where
+instance RLP.Convert DisconnectReason where
   asRLP = RLPConvert (toRLP . fromEnum) (maybeReason <=< fromRLP)
 
 data Disconnect = Disconnect DisconnectReason
   deriving (Show, Generic)
 
-instance AsRLP Disconnect where asRLP = tagged 0x01
+instance RLP.Convert Disconnect where asRLP = tagged 0x01
 
 data Ping = Ping deriving (Show, Generic)
 
-instance AsRLP Ping where asRLP = tagged 0x02
+instance RLP.Convert Ping where asRLP = tagged 0x02
 
 data Pong = Pong deriving (Show, Generic)
 
-instance AsRLP Pong where asRLP = tagged 0x03
+instance RLP.Convert Pong where asRLP = tagged 0x03
 
 
 -- 'Information'
 
 data GetPeers = GetPeers deriving (Show, Generic)
 
-instance AsRLP GetPeers where asRLP = tagged 0x10
+instance RLP.Convert GetPeers where asRLP = tagged 0x10
 
 data Peer = Peer
   { peerAddress :: ByteString
@@ -95,23 +95,23 @@ data Peer = Peer
   , peerUniqueId :: ByteString
   } deriving (Show, Generic)
 
-instance AsRLP Peer
+instance RLP.Convert Peer
 
 data Peers = Peers [Peer] deriving (Show, Generic)
 
-instance AsRLP Peers where asRLP = basicTagged 0x11
+instance RLP.Convert Peers where asRLP = basicTagged 0x11
 
 data Transactions = Transactions [Transaction] deriving (Show, Generic)
 
-instance AsRLP Transactions where asRLP = basicTagged 0x12
+instance RLP.Convert Transactions where asRLP = basicTagged 0x12
 
 data Blocks = Blocks [Block] deriving (Show, Generic)
 
-instance AsRLP Blocks where asRLP = basicTagged 0x13
+instance RLP.Convert Blocks where asRLP = basicTagged 0x13
 
 data GetChain = GetChain [Digest] Int deriving (Show, Generic)
 
-instance AsRLP GetChain where
+instance RLP.Convert GetChain where
   asRLP = withTag 0x14 convertGet
     where
       convertGet = RLPConvert toX fromX
@@ -128,11 +128,11 @@ instance AsRLP GetChain where
 
 data NotInChain = NotInChain Digest deriving (Show, Generic)
 
-instance AsRLP NotInChain where asRLP = tagged 0x15
+instance RLP.Convert NotInChain where asRLP = tagged 0x15
 
 data GetTransactions = GetTransactions deriving (Show, Generic)
 
-instance AsRLP GetTransactions where asRLP = tagged 0x16
+instance RLP.Convert GetTransactions where asRLP = tagged 0x16
 
 
 -- Serialization

@@ -69,12 +69,12 @@ data Union = OneU One
            | OtherU Other
   deriving (Generic, Eq, Show)
 
-instance AsRLP Empty
-instance AsRLP Single
-instance AsRLP Many
-instance AsRLP One where asRLP = tagged 0
-instance AsRLP Other where asRLP = tagged 1
-instance AsRLP Union where asRLP = basic
+instance RLP.Convert Empty
+instance RLP.Convert Single
+instance RLP.Convert Many
+instance RLP.Convert One where asRLP = tagged 0
+instance RLP.Convert Other where asRLP = tagged 1
+instance RLP.Convert Union where asRLP = basic
 
 spec :: Spec
 spec = do

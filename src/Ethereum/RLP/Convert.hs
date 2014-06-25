@@ -1,5 +1,5 @@
 {-# LANGUAGE DefaultSignatures, DeriveGeneric, TypeOperators, FlexibleContexts #-}
-module Ethereum.RLP.Convert(AsRLP, toRLP, fromRLP, asRLP, tagged, basic, general, basicTagged, withTag, RLPConvert(..)) where
+module Ethereum.RLP.Convert(Convert, toRLP, fromRLP, asRLP, tagged, basic, general, basicTagged, withTag, RLPConvert(..)) where
 
 import Control.Applicative
 import qualified Data.Sequence as Seq
@@ -11,7 +11,7 @@ import Ethereum.RLP.Item
 
 data RLPConvert a = RLPConvert { convertToRLP :: a -> Item, convertFromRLP :: Item -> Maybe a }
 
-class AsRLP a where
+class Convert a where
   asRLP :: RLPConvert a
   default asRLP :: (Generic a, G_AsRLP (Rep a)) => RLPConvert a
   asRLP = general
@@ -48,36 +48,36 @@ basic = RLPConvert toX fromX
 basicTagged :: (Generic a, B_AsRLP (Rep a)) => Int -> RLPConvert a
 basicTagged n = withTag n basic
 
-toRLP :: AsRLP a => a -> Item
+toRLP :: Convert a => a -> Item
 toRLP = convertToRLP asRLP
 
-fromRLP :: AsRLP a => Item -> Maybe a
+fromRLP :: Convert a => Item -> Maybe a
 fromRLP = convertFromRLP asRLP
 
-instance AsRLP Item where
+instance Convert Item where
   asRLP = RLPConvert id Just
 
-instance AsRLP ByteString where
+instance Convert ByteString where
   asRLP = RLPConvert toRLP fromRLP
     where
       fromRLP (String bs) = Just bs
       fromRLP (List _) = Nothing
       toRLP = String
 
-instance AsRLP a => AsRLP [a] where
+instance Convert a => Convert [a] where
   asRLP = RLPConvert to from
     where
       from (List list) = mapM fromRLP list
       from (String _) = Nothing
       to = List . map toRLP
 
-instance AsRLP a => AsRLP (Seq.Seq a) where
+instance Convert a => Convert (Seq.Seq a) where
   asRLP = RLPConvert to from
     where
       from item = Seq.fromList <$> fromRLP item
       to = toRLP . toList
 
-instance AsRLP Integer where
+instance Convert Integer where
   asRLP = RLPConvert toRLP fromRLP
     where
       fromRLP (String s) = decodeInt s
@@ -86,7 +86,7 @@ instance AsRLP Integer where
         | n >= 0 = String $ encodeInt n
         | otherwise = error "Can't encode a negative integral type"
 
-instance AsRLP Int where
+instance Convert Int where
   asRLP = RLPConvert toRLP fromRLP
     where
       fromRLP (String s) = decodeInt s
@@ -107,7 +107,7 @@ instance G_AsRLP a => G_AsRLP (M1 i c a) where
     return (M1 y, rest)
   g_toRLP (M1 x) = g_toRLP x
 
-instance AsRLP a => G_AsRLP (K1 i a) where
+instance Convert a => G_AsRLP (K1 i a) where
   g_fromRLP (item : rest) = do
     x <- fromRLP item
     return (K1 x, rest)
@@ -145,7 +145,7 @@ instance B_AsRLP a => B_AsRLP (M1 i c a) where
   b_fromRLP x = M1 <$> b_fromRLP x
   b_toRLP (M1 x) = b_toRLP x
 
-instance AsRLP a => B_AsRLP (K1 i a) where
+instance Convert a => B_AsRLP (K1 i a) where
   b_fromRLP item = K1 <$> fromRLP item
   b_toRLP (K1 x) = toRLP x
 

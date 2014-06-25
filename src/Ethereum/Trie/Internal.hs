@@ -15,8 +15,6 @@ import qualified Data.ByteString as BS
 import Data.Char (intToDigit)
 import Data.Foldable (toList)
 import Data.List(stripPrefix)
-import qualified Data.Map as Map
-import Data.Map(Map)
 import qualified Data.Sequence as Seq
 import Data.Sequence(Seq)
 
@@ -26,7 +24,7 @@ import Ethereum.RLP.Convert
 import Ethereum.Trie.Path
 
 newtype Digest = Digest ByteString
-  deriving (Ord, Eq, AsRLP)
+  deriving (Ord, Eq, RLP.Convert)
 
 instance Show Digest where
   show (Digest bs) = map (intToDigit . word4toInt) $ unpackWord4s bs 
@@ -39,7 +37,7 @@ data Node = Empty
           | Full (Seq Ref) ByteString
   deriving (Show, Eq)
 
-instance AsRLP Ref where
+instance RLP.Convert Ref where
   asRLP = RLPConvert to from
     where
       to (Hash h) = toRLP h
@@ -50,7 +48,7 @@ instance AsRLP Ref where
           then RLP.decode bytes >>= fromRLP
           else return . Hash . Digest $ bytes
 
-instance AsRLP Node where
+instance RLP.Convert Node where
   asRLP = RLPConvert to from
     where
       to Empty = toRLP BS.empty
