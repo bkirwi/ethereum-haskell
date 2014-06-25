@@ -72,9 +72,9 @@ data Union = OneU One
 instance RLP.Convert Empty
 instance RLP.Convert Single
 instance RLP.Convert Many
-instance RLP.Convert One where asRLP = tagged 0
-instance RLP.Convert Other where asRLP = tagged 1
-instance RLP.Convert Union where asRLP = basic
+instance RLP.Convert One where converter = tagged 0
+instance RLP.Convert Other where converter = tagged 1
+instance RLP.Convert Union where converter = basic
 
 spec :: Spec
 spec = do

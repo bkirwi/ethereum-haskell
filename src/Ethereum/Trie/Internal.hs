@@ -38,7 +38,7 @@ data Node = Empty
   deriving (Show, Eq)
 
 instance RLP.Convert Ref where
-  asRLP = RLPConvert to from
+  converter = RLP.Converter to from
     where
       to (Hash h) = toRLP h
       to (Literal l) = toRLP l
@@ -49,7 +49,7 @@ instance RLP.Convert Ref where
           else return . Hash . Digest $ bytes
 
 instance RLP.Convert Node where
-  asRLP = RLPConvert to from
+  converter = RLP.Converter to from
     where
       to Empty = toRLP BS.empty
       to (Shortcut path (Right val)) = toRLP [encodePath True path, val]
