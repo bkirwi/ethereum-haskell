@@ -64,6 +64,7 @@ library
                  , Ethereum.Prelude
                  , Ethereum.RLP
                  , Ethereum.RLP.Convert   
+                 , Ethereum.RLP.Item   
                  , Ethereum.Trie
                  , Ethereum.Trie.Internal
                  , Ethereum.Trie.MapDB
@@ -71,7 +72,7 @@ library
                  , Ethereum.Wire
   
   -- Modules included in this library but not exported.
-  -- other-modules:       
+  -- other-modules: 
   
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:    

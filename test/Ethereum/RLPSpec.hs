@@ -5,16 +5,11 @@ module Ethereum.RLPSpec(spec, One(..), Other(..), Union(..)) where
 import Control.Applicative
 import Data.Aeson as A
 import qualified Data.ByteString as BS
-import Data.ByteString (ByteString)
-import Data.Word(Word8)
-import Data.Monoid
-import Data.Functor
-import Data.HashMap.Strict(toList)
 import qualified Data.Text as T
-import Data.Text(Text)
 import Data.Text.Encoding(encodeUtf8)
 import GHC.Generics
 
+import Ethereum.Prelude
 import qualified Ethereum.RLP as RLP
 import Ethereum.RLP.Convert
 
@@ -45,11 +40,11 @@ instance FromJSON RLP.Item where
   parseJSON (Array a) = RLP.List <$> parseJSON (Array a) 
   parseJSON (String s) = 
     if not (T.null s) && T.head s == '#' 
-    then return . RLP.String . RLP.encodeInt . read . T.unpack . T.tail $ s
+    then return . RLP.String . encodeInt . read . T.unpack . T.tail $ s
     else return . RLP.String . encodeUtf8 $ s
   parseJSON (Number n) =
     let decodeNum :: Integer -> RLP.Item
-        decodeNum = RLP.String . RLP.encodeInt 
+        decodeNum = RLP.String . encodeInt 
     in decodeNum <$> parseJSON (Number n)
 
 data RLPCase = RLPCase RLP.Item ByteString
@@ -85,16 +80,16 @@ spec :: Spec
 spec = do
 
   it "should decode what it encodes (ints)" $ property $ \n ->
-    (n :: Int) >= 0 ==> (RLP.decodeInt . RLP.encodeInt $ n) `shouldBe` Just n
+    (n :: Int) >= 0 ==> (decodeInt . encodeInt $ n) `shouldBe` Just n
 
   it "fails to decode zero-prefixed integers" $ property $ \n padding ->
     padding > 0  && n >= 0 ==>
-      let padded = BS.replicate padding 0 <> RLP.encodeInt (n :: Int)
-      in RLP.decodeInt padded `shouldBe` Nothing
+      let padded = BS.replicate padding 0 <> encodeInt (n :: Int)
+      in decodeInt padded `shouldBe` Nothing
 
   describe "handle example integer conversions" $ do
-    it "should encode 15" $ RLP.encodeInt 15 `shouldBe` "\x0f"
-    it "should encode 1024" $ RLP.encodeInt 1024 `shouldBe` "\x04\x00"
+    it "should encode 15" $ encodeInt 15 `shouldBe` "\x0f"
+    it "should encode 1024" $ encodeInt 1024 `shouldBe` "\x04\x00"
 
   it "should decode what it encodes" $ property $ \rlp ->
     (RLP.decode . RLP.encode $ rlp) `shouldBe` Just rlp

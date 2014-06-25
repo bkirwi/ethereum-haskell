@@ -4,6 +4,7 @@ module Ethereum.Prelude
   ( Word4, word4to8, packWord8, fstWord4, sndWord4, word4toInt, unpackWord4s
   , ByteString, Word8, Map
   , DB, insertDB, lookupDB, runDB
+  , encodeInt, decodeInt
   , module X
   ) where
 
@@ -20,6 +21,19 @@ import Data.Functor as X
 import Data.Maybe as X
 import Data.Monoid as X
 
+encodeInt :: Integral n => n -> ByteString
+encodeInt = BS.reverse <$> BS.unfoldr nextByte
+  where
+    nextByte 0 = Nothing
+    nextByte n = Just (fromIntegral n, n `quot` 256)
+
+decodeInt :: Integral n => ByteString -> Maybe n
+decodeInt bs 
+  | not (BS.null bs) && BS.head bs == 0 = Nothing
+  | otherwise = Just $ BS.foldl addByte 0 bs
+  where
+    addByte n b = (n * 256) + fromIntegral b
+      
 newtype Word4 = Word4 { word4to8 :: Word8 }
   deriving (Eq)
 

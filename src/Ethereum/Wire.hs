@@ -144,12 +144,12 @@ parseMessage :: A.Parser ByteString
 parseMessage = do
   _ <- A.string serializationToken
   sizeBytes <- A.take 4
-  size <- justZ $ RLP.decodeInt $ BS.dropWhile (==0) sizeBytes
+  size <- justZ $ decodeInt $ BS.dropWhile (==0) sizeBytes
   A.take size
 
 buildMessage :: ByteString -> ByteString
 buildMessage body =
-  let size = RLP.encodeInt $ BS.length body
+  let size = encodeInt $ BS.length body
       padding = 4 - BS.length size
       paddedSize = BS.replicate padding 0x00 <> size
   in serializationToken <> paddedSize <> body

@@ -2,12 +2,12 @@
 module Ethereum.RLP.Convert(AsRLP, toRLP, fromRLP, asRLP, tagged, basic, general, basicTagged, withTag, RLPConvert(..)) where
 
 import Control.Applicative
-import Data.ByteString (ByteString)
 import qualified Data.Sequence as Seq
 import Data.Foldable(toList)
 import GHC.Generics
 
-import Ethereum.RLP
+import Ethereum.Prelude
+import Ethereum.RLP.Item
 
 data RLPConvert a = RLPConvert { convertToRLP :: a -> Item, convertFromRLP :: Item -> Maybe a }
 
