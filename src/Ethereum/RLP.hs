@@ -11,7 +11,11 @@ import Data.Bits
 
 data Item = String ByteString
           | List [Item]
-          deriving (Eq, Show)
+          deriving (Eq)
+
+instance Show Item where
+  show (String str) = show str
+  show (List list) = show list
 
 encode :: Item -> ByteString
 encode x = case x of
