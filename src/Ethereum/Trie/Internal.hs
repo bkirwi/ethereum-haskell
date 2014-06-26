@@ -20,7 +20,6 @@ import Data.Sequence(Seq)
 
 import Ethereum.Prelude
 import qualified Ethereum.RLP as RLP
-import Ethereum.RLP.Convert
 import Ethereum.Trie.Path
 
 newtype Digest = Digest ByteString
@@ -40,42 +39,42 @@ data Node = Empty
 instance RLP.Convert Ref where
   converter = RLP.Converter to from
     where
-      to (Hash h) = toRLP h
-      to (Literal l) = toRLP l
+      to (Hash h) = RLP.toItem h
+      to (Literal l) = RLP.toItem l
       from rlp = do
-        bytes <- fromRLP rlp
+        bytes <- RLP.fromItem rlp
         if BS.length bytes < 32 
-          then RLP.decode bytes >>= fromRLP
+          then RLP.decode bytes >>= RLP.fromItem
           else return . Hash . Digest $ bytes
 
 instance RLP.Convert Node where
   converter = RLP.Converter to from
     where
-      to Empty = toRLP BS.empty
-      to (Shortcut path (Right val)) = toRLP [encodePath True path, val]
-      to (Shortcut path (Left ref)) = toRLP [toRLP $ encodePath False path, toRLP ref]
-      to (Full refs val) = toRLP (fmap toRLP refs <> Seq.singleton (toRLP val))
+      to Empty = RLP.toItem BS.empty
+      to (Shortcut path (Right val)) = RLP.toItem [encodePath True path, val]
+      to (Shortcut path (Left ref)) = RLP.toItem [RLP.toItem $ encodePath False path, RLP.toItem ref]
+      to (Full refs val) = RLP.toItem (fmap RLP.toItem refs <> Seq.singleton (RLP.toItem val))
       from (RLP.String bs)
         | BS.null bs = Just Empty
         | otherwise = Nothing
       from (RLP.List [pathItem, targetItem]) = do
-        pathBS <- fromRLP pathItem
+        pathBS <- RLP.fromItem pathItem
         (isTerminal, path) <- decodePath pathBS
         target <-
-          if isTerminal then Right <$> fromRLP targetItem 
-          else Left <$> fromRLP targetItem
+          if isTerminal then Right <$> RLP.fromItem targetItem 
+          else Left <$> RLP.fromItem targetItem
         return $ Shortcut path target 
       from (RLP.List many) = do
         guard $ length many == 17 
-        refs <- mapM fromRLP $ init many 
-        val <- fromRLP $ last many
+        refs <- mapM RLP.fromItem $ init many 
+        val <- RLP.fromItem $ last many
         return $ Full (Seq.fromList refs) val
 
 type NodeDB = DB Digest Node
 
 putNode :: Node -> NodeDB Ref
 putNode node =
-  let bytes = RLP.encode $ toRLP node
+  let bytes = RLP.encode $ RLP.toItem node
       digest = Digest $ SHA3.hash 256 bytes
   in if BS.length bytes < 32
     then return $ Literal node

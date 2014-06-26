@@ -11,7 +11,7 @@ import GHC.Generics
 
 import Ethereum.Prelude
 import qualified Ethereum.RLP as RLP
-import Ethereum.RLP.Convert
+import Ethereum.RLP(tagged, asProduct, asUnderlying)
 
 import Test.Hspec
 import Test.QuickCheck
@@ -72,9 +72,9 @@ data Union = OneU One
 instance RLP.Convert Empty
 instance RLP.Convert Single
 instance RLP.Convert Many
-instance RLP.Convert One where converter = tagged 0
-instance RLP.Convert Other where converter = tagged 1
-instance RLP.Convert Union where converter = basic
+instance RLP.Convert One where converter = tagged 0 asProduct
+instance RLP.Convert Other where converter = tagged 1 asProduct
+instance RLP.Convert Union where converter = asUnderlying
 
 spec :: Spec
 spec = do
@@ -147,24 +147,24 @@ spec = do
       Empty `convertsTo` RLP.List []
 
     it "encodes a single-element constructor as a singleton list" $ property $ \bs ->
-      Single bs `convertsTo` toRLP [bs]
+      Single bs `convertsTo` RLP.toItem [bs]
 
     it "encodes a product as a list" $ property $ \bs0 bs1 ->
-      Many bs0 bs1 `convertsTo` toRLP [bs0, bs1]
+      Many bs0 bs1 `convertsTo` RLP.toItem [bs0, bs1]
 
-    it "implements tags" $ One `convertsTo` toRLP [0 :: Int]
+    it "implements tags" $ One `convertsTo` RLP.toItem [0 :: Int]
 
     it "encodes first element of a union" $
-      OneU One `convertsTo` toRLP One
+      OneU One `convertsTo` RLP.toItem One
 
     it "encodes the second element of a union" $ property $ \bs0 bs1 ->
       let other = Other $ Many bs0 bs1
-      in OtherU other `convertsTo` toRLP other
+      in OtherU other `convertsTo` RLP.toItem other
 
   where 
     input `convertsTo` output = do
-      toRLP input `shouldBe` output
-      fromRLP output `shouldBe` Just input
+      RLP.toItem input `shouldBe` output
+      RLP.fromItem output `shouldBe` Just input
     input `encodesTo` output = do
       it ("should encode " <> show input <> " as " <> show output) $ 
         RLP.encode input `shouldBe` output

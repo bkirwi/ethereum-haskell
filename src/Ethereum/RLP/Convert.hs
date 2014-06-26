@@ -1,160 +1,155 @@
 {-# LANGUAGE DefaultSignatures, DeriveGeneric, TypeOperators, FlexibleContexts #-}
-module Ethereum.RLP.Convert(Convert, toRLP, fromRLP, converter, tagged, basic, general, basicTagged, withTag, Converter(..)) where
+module Ethereum.RLP.Convert(Convert, toItem, fromItem, converter, asUnderlying, asProduct, tagged, Converter(..)) where
 
 import Control.Applicative
 import qualified Data.Sequence as Seq
 import Data.Foldable(toList)
-import GHC.Generics
+import GHC.Generics hiding (to, from)
+import qualified GHC.Generics as G
 
 import Ethereum.Prelude
 import Ethereum.RLP.Item
 
 data Converter a = Converter { convertToRLP :: a -> Item, convertFromRLP :: Item -> Maybe a }
 
+toItem :: Convert a => a -> Item
+toItem = convertToRLP converter
+
+fromItem :: Convert a => Item -> Maybe a
+fromItem = convertFromRLP converter
+
 class Convert a where
   converter :: Converter a
-  default converter :: (Generic a, G_AsRLP (Rep a)) => Converter a
-  converter = general
+  default converter :: (Generic a, ConvertProduct (Rep a)) => Converter a
+  converter = asProduct
 
-general :: (Generic a, G_AsRLP (Rep a)) => Converter a
-general = Converter toX fromX
+asProduct :: (Generic a, ConvertProduct (Rep a)) => Converter a
+asProduct = Converter to from
   where
-    toX input = List $ g_toRLP $ from input
-    fromX (List list) = do
-      (got, []) <- g_fromRLP list
-      return $ to got
-    fromX _ = Nothing
+    to input = List $ productToItem $ G.from input
+    from (List list) = do
+      (got, []) <- productFromItem list
+      return $ G.to got
+    from _ = Nothing
 
-withTag :: Int -> Converter a -> Converter a
-withTag n conv = Converter toX fromX
+tagged :: Int -> Converter a -> Converter a
+tagged n conv = Converter to from
   where
-    tag = toRLP n
-    toX input = case convertToRLP conv input of
+    tag = toItem n
+    to input = case convertToRLP conv input of
       List list -> List (tag:list)
       other -> other
-    fromX (List (x:xs)) | x == tag = convertFromRLP conv $ List xs
-    fromX (List []) = Nothing
-    fromX item = convertFromRLP conv item
+    from (List (x:xs)) | x == tag = convertFromRLP conv $ List xs
+    from (List []) = Nothing
+    from item = convertFromRLP conv item
 
-tagged :: (Generic a, G_AsRLP (Rep a)) => Int -> Converter a
-tagged n = withTag n general
-
-basic :: (Generic a, B_AsRLP (Rep a)) => Converter a
-basic = Converter toX fromX
+asUnderlying :: (Generic a, ConvertUnderlying (Rep a)) => Converter a
+asUnderlying = Converter to from
   where
-    toX input = b_toRLP $ from input
-    fromX item = to <$> b_fromRLP item
-
-basicTagged :: (Generic a, B_AsRLP (Rep a)) => Int -> Converter a
-basicTagged n = withTag n basic
-
-toRLP :: Convert a => a -> Item
-toRLP = convertToRLP converter
-
-fromRLP :: Convert a => Item -> Maybe a
-fromRLP = convertFromRLP converter
+    to input = underlyingToItem $ G.from input
+    from item = G.to <$> underlyingFromItem item
 
 instance Convert Item where
   converter = Converter id Just
 
 instance Convert ByteString where
-  converter = Converter toRLP fromRLP
+  converter = Converter to from
     where
-      fromRLP (String bs) = Just bs
-      fromRLP (List _) = Nothing
-      toRLP = String
+      from (String bs) = Just bs
+      from (List _) = Nothing
+      to = String
 
 instance Convert a => Convert [a] where
   converter = Converter to from
     where
-      from (List list) = mapM fromRLP list
+      from (List list) = mapM fromItem list
       from (String _) = Nothing
-      to = List . map toRLP
+      to = List . map toItem
 
 instance Convert a => Convert (Seq.Seq a) where
   converter = Converter to from
     where
-      from item = Seq.fromList <$> fromRLP item
-      to = toRLP . toList
+      from item = Seq.fromList <$> fromItem item
+      to = toItem . toList
 
 instance Convert Integer where
-  converter = Converter toRLP fromRLP
+  converter = Converter to from
     where
-      fromRLP (String s) = decodeInt s
-      fromRLP (List _) = Nothing
-      toRLP n
+      from (String s) = decodeInt s
+      from (List _) = Nothing
+      to n
         | n >= 0 = String $ encodeInt n
         | otherwise = error "Can't encode a negative integral type"
 
 instance Convert Int where
-  converter = Converter toRLP fromRLP
+  converter = Converter to from
     where
-      fromRLP (String s) = decodeInt s
-      fromRLP (List _) = Nothing
-      toRLP n
+      from (String s) = decodeInt s
+      from (List _) = Nothing
+      to n
         | n >= 0 = String $ encodeInt n
         | otherwise = error "Can't encode a negative integral type"
 
 -- Generics!
 
-class G_AsRLP f where
-  g_fromRLP :: [Item] -> Maybe (f a, [Item])
-  g_toRLP :: f a -> [Item]
+class ConvertProduct f where
+  productFromItem :: [Item] -> Maybe (f a, [Item])
+  productToItem :: f a -> [Item]
 
-instance G_AsRLP a => G_AsRLP (M1 i c a) where
-  g_fromRLP x = do
-    (y, rest) <- g_fromRLP x
+instance ConvertProduct a => ConvertProduct (M1 i c a) where
+  productFromItem x = do
+    (y, rest) <- productFromItem x
     return (M1 y, rest)
-  g_toRLP (M1 x) = g_toRLP x
+  productToItem (M1 x) = productToItem x
 
-instance Convert a => G_AsRLP (K1 i a) where
-  g_fromRLP (item : rest) = do
-    x <- fromRLP item
+instance Convert a => ConvertProduct (K1 i a) where
+  productFromItem (item : rest) = do
+    x <- fromItem item
     return (K1 x, rest)
-  g_fromRLP [] = Nothing
-  g_toRLP (K1 x) = [toRLP x]
+  productFromItem [] = Nothing
+  productToItem (K1 x) = [toItem x]
 
-instance (G_AsRLP a, G_AsRLP b) => G_AsRLP (a :*: b) where
-  g_fromRLP list = do
-    (a, rest0) <- g_fromRLP list
-    (b, rest1) <- g_fromRLP rest0
+instance (ConvertProduct a, ConvertProduct b) => ConvertProduct (a :*: b) where
+  productFromItem list = do
+    (a, rest0) <- productFromItem list
+    (b, rest1) <- productFromItem rest0
     return (a :*: b, rest1)
-  g_toRLP (a :*: b) = g_toRLP a ++ g_toRLP b
+  productToItem (a :*: b) = productToItem a ++ productToItem b
 
-instance (G_AsRLP a, G_AsRLP b) => G_AsRLP (a :+: b) where
-  g_fromRLP items = case g_fromRLP items of
+instance (ConvertProduct a, ConvertProduct b) => ConvertProduct (a :+: b) where
+  productFromItem items = case productFromItem items of
     Just (left, rest) -> Just (L1 left, rest)
-    Nothing -> case g_fromRLP items of
+    Nothing -> case productFromItem items of
       Just (right, rest) -> Just (R1 right, rest)
       Nothing -> Nothing
-  g_toRLP (L1 left) = g_toRLP left
-  g_toRLP (R1 right) = g_toRLP right
+  productToItem (L1 left) = productToItem left
+  productToItem (R1 right) = productToItem right
 
-instance G_AsRLP U1 where
-  g_fromRLP x = Just (U1, x)
-  g_toRLP _ = []
+instance ConvertProduct U1 where
+  productFromItem x = Just (U1, x)
+  productToItem _ = []
 
 
 -- Basic - unwrapped version
 
-class B_AsRLP f where
-  b_fromRLP :: Item -> Maybe (f a)
-  b_toRLP :: f a -> Item
+class ConvertUnderlying f where
+  underlyingFromItem :: Item -> Maybe (f a)
+  underlyingToItem :: f a -> Item
 
-instance B_AsRLP a => B_AsRLP (M1 i c a) where
-  b_fromRLP x = M1 <$> b_fromRLP x
-  b_toRLP (M1 x) = b_toRLP x
+instance ConvertUnderlying a => ConvertUnderlying (M1 i c a) where
+  underlyingFromItem x = M1 <$> underlyingFromItem x
+  underlyingToItem (M1 x) = underlyingToItem x
 
-instance Convert a => B_AsRLP (K1 i a) where
-  b_fromRLP item = K1 <$> fromRLP item
-  b_toRLP (K1 x) = toRLP x
+instance Convert a => ConvertUnderlying (K1 i a) where
+  underlyingFromItem item = K1 <$> fromItem item
+  underlyingToItem (K1 x) = toItem x
 
-instance (B_AsRLP a, B_AsRLP b) => B_AsRLP (a :+: b) where
-  b_fromRLP item = case b_fromRLP item of
+instance (ConvertUnderlying a, ConvertUnderlying b) => ConvertUnderlying (a :+: b) where
+  underlyingFromItem item = case underlyingFromItem item of
     Just left -> Just (L1 left)
-    Nothing -> case b_fromRLP item of
+    Nothing -> case underlyingFromItem item of
       Just right -> Just (R1 right)
       Nothing -> Nothing
-  b_toRLP (L1 left) = b_toRLP left
-  b_toRLP (R1 right) = b_toRLP right
+  underlyingToItem (L1 left) = underlyingToItem left
+  underlyingToItem (R1 right) = underlyingToItem right
 
