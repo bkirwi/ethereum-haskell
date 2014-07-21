@@ -69,12 +69,15 @@ data Union = OneU One
            | OtherU Other
   deriving (Generic, Eq, Show)
 
+data Breaky = ShortB ByteString | LongB ByteString ByteString deriving (Show, Eq, Generic)
+
 instance RLP.Convert Empty
 instance RLP.Convert Single
 instance RLP.Convert Many
 instance RLP.Convert One where converter = tagged 0 asProduct
 instance RLP.Convert Other where converter = tagged 1 asProduct
 instance RLP.Convert Union where converter = asUnderlying
+instance RLP.Convert Breaky
 
 spec :: Spec
 spec = do
@@ -160,6 +163,13 @@ spec = do
     it "encodes the second element of a union" $ property $ \bs0 bs1 ->
       let other = Other $ Many bs0 bs1
       in OtherU other `convertsTo` RLP.toItem other
+
+    it "should fail to decode a product when truncated" $ property $ \bs ->
+      let tooShort = RLP.toItem [bs :: ByteString]
+      in (RLP.fromItem tooShort :: Maybe Many) `shouldBe` Nothing
+
+    it "should decode the correct data for a sum-of-products" $ property $ \bs0 bs1 ->
+      LongB bs0 bs1 `convertsTo` RLP.toItem [bs0, bs1]
 
   where 
     input `convertsTo` output = do

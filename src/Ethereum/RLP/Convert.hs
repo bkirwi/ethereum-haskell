@@ -26,10 +26,8 @@ class Convert a where
 asProduct :: (Generic a, ConvertProduct (Rep a)) => Converter a
 asProduct = Converter to from
   where
-    to input = List $ productToItem $ G.from input
-    from (List list) = do
-      (got, []) <- productFromItem list
-      return $ G.to got
+    to input = List $ productToItems $ G.from input
+    from (List list) = G.to <$> productFromItems list
     from _ = Nothing
 
 tagged :: Int -> Converter a -> Converter a
@@ -93,41 +91,47 @@ instance Convert Int where
 -- Generics!
 
 class ConvertProduct f where
-  productFromItem :: [Item] -> Maybe (f a, [Item])
-  productToItem :: f a -> [Item]
+  partialFromItems :: [Item] -> Maybe (f a, [Item])
+  productToItems :: f a -> [Item]
+
+productFromItems :: ConvertProduct f => [Item] -> Maybe (f a)
+productFromItems list = partialFromItems list >>= complete
+  where
+    complete (a, []) = Just a
+    complete _ = Nothing
 
 instance ConvertProduct a => ConvertProduct (M1 i c a) where
-  productFromItem x = do
-    (y, rest) <- productFromItem x
+  partialFromItems x = do
+    (y, rest) <- partialFromItems x
     return (M1 y, rest)
-  productToItem (M1 x) = productToItem x
+  productToItems (M1 x) = productToItems x
 
 instance Convert a => ConvertProduct (K1 i a) where
-  productFromItem (item : rest) = do
+  partialFromItems (item : rest) = do
     x <- fromItem item
     return (K1 x, rest)
-  productFromItem [] = Nothing
-  productToItem (K1 x) = [toItem x]
+  partialFromItems [] = Nothing
+  productToItems (K1 x) = [toItem x]
 
 instance (ConvertProduct a, ConvertProduct b) => ConvertProduct (a :*: b) where
-  productFromItem list = do
-    (a, rest0) <- productFromItem list
-    (b, rest1) <- productFromItem rest0
+  partialFromItems list = do
+    (a, rest0) <- partialFromItems list
+    (b, rest1) <- partialFromItems rest0
     return (a :*: b, rest1)
-  productToItem (a :*: b) = productToItem a ++ productToItem b
+  productToItems (a :*: b) = productToItems a ++ productToItems b
 
 instance (ConvertProduct a, ConvertProduct b) => ConvertProduct (a :+: b) where
-  productFromItem items = case productFromItem items of
-    Just (left, rest) -> Just (L1 left, rest)
-    Nothing -> case productFromItem items of
-      Just (right, rest) -> Just (R1 right, rest)
-      Nothing -> Nothing
-  productToItem (L1 left) = productToItem left
-  productToItem (R1 right) = productToItem right
+  partialFromItems items = do
+    let left = L1 <$> productFromItems items
+        right = R1 <$> productFromItems items
+    product <- left <|> right
+    return (product, [])
+  productToItems (L1 left) = productToItems left
+  productToItems (R1 right) = productToItems right
 
 instance ConvertProduct U1 where
-  productFromItem x = Just (U1, x)
-  productToItem _ = []
+  partialFromItems x = Just (U1, x)
+  productToItems _ = []
 
 
 -- Basic - unwrapped version
@@ -145,11 +149,10 @@ instance Convert a => ConvertUnderlying (K1 i a) where
   underlyingToItem (K1 x) = toItem x
 
 instance (ConvertUnderlying a, ConvertUnderlying b) => ConvertUnderlying (a :+: b) where
-  underlyingFromItem item = case underlyingFromItem item of
-    Just left -> Just (L1 left)
-    Nothing -> case underlyingFromItem item of
-      Just right -> Just (R1 right)
-      Nothing -> Nothing
+  underlyingFromItem item = 
+    let left = L1 <$> underlyingFromItem item
+        right = R1 <$> underlyingFromItem item
+    in left <|> right
   underlyingToItem (L1 left) = underlyingToItem left
   underlyingToItem (R1 right) = underlyingToItem right
 
