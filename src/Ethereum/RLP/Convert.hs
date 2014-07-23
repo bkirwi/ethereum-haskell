@@ -10,25 +10,22 @@ import qualified GHC.Generics as G
 import Ethereum.Prelude
 import Ethereum.RLP.Item
 
-data Converter a = Converter { convertToRLP :: a -> Item, convertFromRLP :: Item -> Maybe a }
-
-toItem :: Convert a => a -> Item
-toItem = convertToRLP converter
-
-fromItem :: Convert a => Item -> Maybe a
-fromItem = convertFromRLP converter
+-- | Dictionary that holds conversion methods for both directions.
+data Converter a = Converter 
+  { convertToRLP :: a -> Item
+  , convertFromRLP :: Item -> Maybe a
+  }
 
 class Convert a where
   converter :: Converter a
   default converter :: (Generic a, ConvertProduct (Rep a)) => Converter a
   converter = asProduct
 
-asProduct :: (Generic a, ConvertProduct (Rep a)) => Converter a
-asProduct = Converter to from
-  where
-    to input = List $ productToItems $ G.from input
-    from (List list) = G.to <$> productFromItems list
-    from _ = Nothing
+toItem :: Convert a => a -> Item
+toItem = convertToRLP converter
+
+fromItem :: Convert a => Item -> Maybe a
+fromItem = convertFromRLP converter
 
 tagged :: Int -> Converter a -> Converter a
 tagged n conv = Converter to from
@@ -40,12 +37,6 @@ tagged n conv = Converter to from
     from (List (x:xs)) | x == tag = convertFromRLP conv $ List xs
     from (List []) = Nothing
     from item = convertFromRLP conv item
-
-asUnderlying :: (Generic a, ConvertUnderlying (Rep a)) => Converter a
-asUnderlying = Converter to from
-  where
-    to input = underlyingToItem $ G.from input
-    from item = G.to <$> underlyingFromItem item
 
 instance Convert Item where
   converter = Converter id Just
@@ -90,6 +81,13 @@ instance Convert Int where
 
 -- Generics!
 
+asProduct :: (Generic a, ConvertProduct (Rep a)) => Converter a
+asProduct = Converter to from
+  where
+    to input = List $ productToItems $ G.from input
+    from (List list) = G.to <$> productFromItems list
+    from _ = Nothing
+
 class ConvertProduct f where
   partialFromItems :: [Item] -> Maybe (f a, [Item])
   productToItems :: f a -> [Item]
@@ -100,11 +98,9 @@ productFromItems list = partialFromItems list >>= complete
     complete (a, []) = Just a
     complete _ = Nothing
 
-instance ConvertProduct a => ConvertProduct (M1 i c a) where
-  partialFromItems x = do
-    (y, rest) <- partialFromItems x
-    return (M1 y, rest)
-  productToItems (M1 x) = productToItems x
+instance ConvertProduct U1 where
+  partialFromItems x = Just (U1, x)
+  productToItems _ = []
 
 instance Convert a => ConvertProduct (K1 i a) where
   partialFromItems (item : rest) = do
@@ -129,12 +125,20 @@ instance (ConvertProduct a, ConvertProduct b) => ConvertProduct (a :+: b) where
   productToItems (L1 left) = productToItems left
   productToItems (R1 right) = productToItems right
 
-instance ConvertProduct U1 where
-  partialFromItems x = Just (U1, x)
-  productToItems _ = []
+instance ConvertProduct a => ConvertProduct (M1 i c a) where
+  partialFromItems x = do
+    (y, rest) <- partialFromItems x
+    return (M1 y, rest)
+  productToItems (M1 x) = productToItems x
 
 
 -- Basic - unwrapped version
+
+asUnderlying :: (Generic a, ConvertUnderlying (Rep a)) => Converter a
+asUnderlying = Converter to from
+  where
+    to input = underlyingToItem $ G.from input
+    from item = G.to <$> underlyingFromItem item
 
 class ConvertUnderlying f where
   underlyingFromItem :: Item -> Maybe (f a)
