@@ -132,8 +132,8 @@ insertPath (Shortcut nPath nVal) path bs = do
       newNode <- insertPath full suffix bs
       return $ Left newNode
   case (prefix, next) of
-    ([], Left newNode) -> return newNode
-    (_, Left newNode) -> Shortcut prefix . Left <$> putNode newNode 
+    ([], Left newNode) -> nrml newNode
+    (_, Left newNode) -> (Shortcut prefix . Left <$> putNode newNode) >>= nrml
     (_, Right bs) -> return $ Shortcut prefix $ Right bs 
   where
     splitPrefix [] b = ([], [], b)  
@@ -147,16 +147,18 @@ insertPath (Full refs val) [] bs = return $ Full refs bs
 insertPath (Full refs val) (p:ps) bs = do
   let index = word4toInt p
       ref = refs `Seq.index` index
-  newRef <- insertRef ref ps bs
+  node <- getNode ref
+  newNode <- insertPath node ps bs
+  nrmlNode <- nrml newNode
+  newRef <- putNode nrmlNode
   let newRefs = Seq.update index newRef refs
-  return $ Full newRefs val
+  nrml $ Full newRefs val
   
 insertRef :: Ref -> Path -> ByteString -> NodeDB Ref
 insertRef ref path bs = do
   node <- getNode ref
   newNode <- insertPath node path bs
-  newRef <- putNode newNode
-  normalize newRef
+  putNode newNode
 
 normalize :: Ref -> NodeDB Ref
 normalize ref = getNode ref >>= nrml >>= putNode
@@ -164,16 +166,16 @@ normalize ref = getNode ref >>= nrml >>= putNode
 nrml :: Node -> NodeDB Node
 nrml Empty = return Empty
 nrml (Shortcut path (Left ref)) = do
-  node <- getNode ref >>= nrml
+  node <- getNode ref
   addPrefix path node
 nrml (Shortcut _ (Right val)) | BS.null val = return Empty
 nrml s@(Shortcut _ _) = return s
 nrml (Full refs val) = do
-  nrmlRefs <- mapM normalize $ toList refs
-  let nonEmpty = filter (\x -> snd x /= Literal Empty) $ zip [0..] nrmlRefs
+  let nrmlRefs = toList refs
+      nonEmpty = filter (\x -> snd x /= Literal Empty) $ zip [0..] nrmlRefs
   case (BS.null val, nonEmpty) of
     (True, []) -> return Empty
-    (True, (w, ref) : []) -> getNode ref >>= nrml >>= addPrefix [sndWord4 w]
+    (True, (w, ref) : []) -> getNode ref >>= addPrefix [sndWord4 w]
     (False, []) -> return $ Shortcut [] $ Right val
     _ -> return $ Full (Seq.fromList nrmlRefs) val
 
