@@ -176,7 +176,7 @@ spec = do
           Just updated = withInitialState init $ do
             got <- lookupDB key
             insertDB key got
-      in orig `shouldBe` updated
+      in updated `shouldBe` orig
 
   describe "Common test cases" $ testCommon "trietest" $ \test ->
     it ("should hash to " ++ show (Digest $ expectation test) ++ " when all values are inserted") $ 
