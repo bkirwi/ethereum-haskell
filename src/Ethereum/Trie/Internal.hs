@@ -163,7 +163,6 @@ normalize ref = getNode ref >>= nrml >>= putNode
 
 nrml :: Node -> NodeDB Node
 nrml Empty = return Empty
-nrml (Shortcut [] (Left ref)) = getNode ref >>= nrml
 nrml (Shortcut path (Left ref)) = do
   node <- getNode ref >>= nrml
   addPrefix path node
@@ -178,6 +177,7 @@ nrml (Full refs val) = do
     (False, []) -> return $ Shortcut [] $ Right val
     _ -> return $ Full (Seq.fromList nrmlRefs) val
 
+addPrefix [] node = return node
 addPrefix path node = case node of
   Empty -> return Empty
   Shortcut subpath val -> return $ Shortcut (path ++ subpath) val
