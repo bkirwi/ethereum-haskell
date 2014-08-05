@@ -160,24 +160,25 @@ insertRef ref path bs = do
 
 normalize :: Ref -> NodeDB Ref
 normalize ref = getNode ref >>= nrml >>= putNode
-  where
-    nrml :: Node -> NodeDB Node
-    nrml Empty = return Empty
-    nrml (Shortcut [] (Left ref)) = getNode ref >>= nrml
-    nrml (Shortcut path (Left ref)) = do
-      node <- getNode ref >>= nrml
-      addPrefix path node
-    nrml (Shortcut _ (Right val)) | BS.null val = return Empty
-    nrml s@(Shortcut _ _) = return s
-    nrml (Full refs val) = do
-      nrmlRefs <- mapM normalize $ toList refs
-      let nonEmpty = filter (\x -> snd x /= Literal Empty) $ zip [0..] nrmlRefs
-      case (BS.null val, nonEmpty) of
-        (True, []) -> return Empty
-        (True, (w, ref) : []) -> getNode ref >>= nrml >>= addPrefix [sndWord4 w]
-        (False, []) -> return $ Shortcut [] $ Right val
-        _ -> return $ Full (Seq.fromList nrmlRefs) val
-    addPrefix path node = case node of
-      Empty -> return Empty
-      Shortcut subpath val -> return $ Shortcut (path ++ subpath) val
-      _ -> Shortcut path . Left <$> putNode node
+
+nrml :: Node -> NodeDB Node
+nrml Empty = return Empty
+nrml (Shortcut [] (Left ref)) = getNode ref >>= nrml
+nrml (Shortcut path (Left ref)) = do
+  node <- getNode ref >>= nrml
+  addPrefix path node
+nrml (Shortcut _ (Right val)) | BS.null val = return Empty
+nrml s@(Shortcut _ _) = return s
+nrml (Full refs val) = do
+  nrmlRefs <- mapM normalize $ toList refs
+  let nonEmpty = filter (\x -> snd x /= Literal Empty) $ zip [0..] nrmlRefs
+  case (BS.null val, nonEmpty) of
+    (True, []) -> return Empty
+    (True, (w, ref) : []) -> getNode ref >>= nrml >>= addPrefix [sndWord4 w]
+    (False, []) -> return $ Shortcut [] $ Right val
+    _ -> return $ Full (Seq.fromList nrmlRefs) val
+
+addPrefix path node = case node of
+  Empty -> return Empty
+  Shortcut subpath val -> return $ Shortcut (path ++ subpath) val
+  _ -> Shortcut path . Left <$> putNode node
