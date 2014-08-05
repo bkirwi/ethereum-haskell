@@ -132,8 +132,8 @@ insertPath (Shortcut nPath nVal) path bs = do
       newNode <- insertPath full suffix bs
       return $ Left newNode
   case (prefix, next) of
-    ([], Left newNode) -> nrml newNode
-    (_, Left newNode) -> (Shortcut prefix . Left <$> putNode newNode) >>= nrml
+    ([], Left newNode) -> normalize newNode
+    (_, Left newNode) -> (Shortcut prefix . Left <$> putNode newNode) >>= normalize
     (_, Right bs) -> return $ Shortcut prefix $ Right bs 
   where
     splitPrefix [] b = ([], [], b)  
@@ -149,10 +149,10 @@ insertPath (Full refs val) (p:ps) bs = do
       ref = refs `Seq.index` index
   node <- getNode ref
   newNode <- insertPath node ps bs
-  nrmlNode <- nrml newNode
+  nrmlNode <- normalize newNode
   newRef <- putNode nrmlNode
   let newRefs = Seq.update index newRef refs
-  nrml $ Full newRefs val
+  normalize $ Full newRefs val
   
 insertRef :: Ref -> Path -> ByteString -> NodeDB Ref
 insertRef ref path bs = do
@@ -160,17 +160,14 @@ insertRef ref path bs = do
   newNode <- insertPath node path bs
   putNode newNode
 
-normalize :: Ref -> NodeDB Ref
-normalize ref = getNode ref >>= nrml >>= putNode
-
-nrml :: Node -> NodeDB Node
-nrml Empty = return Empty
-nrml (Shortcut path (Left ref)) = do
+normalize :: Node -> NodeDB Node
+normalize Empty = return Empty
+normalize (Shortcut path (Left ref)) = do
   node <- getNode ref
   addPrefix path node
-nrml (Shortcut _ (Right val)) | BS.null val = return Empty
-nrml s@(Shortcut _ _) = return s
-nrml (Full refs val) = do
+normalize (Shortcut _ (Right val)) | BS.null val = return Empty
+normalize s@(Shortcut _ _) = return s
+normalize (Full refs val) = do
   let nrmlRefs = toList refs
       nonEmpty = filter (\x -> snd x /= Literal Empty) $ zip [0..] nrmlRefs
   case (BS.null val, nonEmpty) of

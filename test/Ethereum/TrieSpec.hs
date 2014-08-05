@@ -33,27 +33,25 @@ instance Arbitrary (NodeDB Ref) where
         | otherwise = oneof [empty, shortcutVal, shortcutRef, node]
         where
           empty, shortcutVal, shortcutRef, node :: Gen (NodeDB Ref)
-          empty = return $ putNode Empty
+          empty = return $ putNormal Empty
           shortcutVal = do
             path <- arbitrary
             value <- arbitrary
             return $ do
-              ref <- putNode $ Shortcut path $ Right value
-              normalize ref
+              putNormal $ Shortcut path $ Right value
           shortcutRef = do
             path <- arbitrary
             refM <- anyNode (size - 1)
             return $ do
               ref <- refM 
-              newRef <- putNode $ Shortcut path $ Left ref
-              normalize newRef
+              putNormal $ Shortcut path $ Left ref
           node = do
             refsM <- replicateM 16 $ anyNode (size `div` 8)
             value <- arbitrary
             return $ do
               refs <- sequence refsM
-              ref <- putNode $ Full (Seq.fromList refs) value
-              normalize ref
+              putNormal $ Full (Seq.fromList refs) value
+          putNormal node = normalize node >>= putNode
 
 instance Arbitrary (Trie ()) where
   arbitrary = toTrie <$> arbitrary
