@@ -116,44 +116,42 @@ toFull (Shortcut (p:ps) val) = do
   return $ Full newRefs BS.empty
 
 insertPath :: Node -> Path -> ByteString -> NodeDB Node
-insertPath Empty path bs 
-  | BS.null bs = return Empty
-  | otherwise = return $ Shortcut path $ Right bs
-insertPath (Shortcut nPath nVal) path bs = do
-  let (prefix, nSuffix, suffix) = splitPrefix nPath path
-  next <- case (nSuffix, suffix, nVal) of
-    ([], [], Right _) -> return $ Right bs
-    ([], _, Left ref) -> do
-      node <- getNode ref
-      newNode <- insertPath node suffix bs
-      return $ Left newNode 
-    _ -> do 
-      full <- toFull (Shortcut nSuffix nVal) 
-      newNode <- insertPath full suffix bs
-      return $ Left newNode
-  case (prefix, next) of
-    ([], Left newNode) -> normalize newNode
-    (_, Left newNode) -> (Shortcut prefix . Left <$> putNode newNode) >>= normalize
-    (_, Right bs) -> return $ Shortcut prefix $ Right bs 
+insertPath node path bs = doInsert node >>= normalize
   where
-    splitPrefix [] b = ([], [], b)  
-    splitPrefix a [] = ([], a, [])  
+    doInsert Empty = return $ Shortcut path $ Right bs
+    doInsert (Shortcut nPath nVal) = do
+      let (prefix, nSuffix, suffix) = splitPrefix nPath path
+      next <- case (nSuffix, suffix, nVal) of
+        ([], [], Right _) -> return $ Right bs
+        ([], _, Left ref) -> do
+          node <- getNode ref
+          newNode <- insertPath node suffix bs
+          return $ Left newNode
+        _ -> do
+          full <- toFull (Shortcut nSuffix nVal)
+          newNode <- insertPath full suffix bs
+          return $ Left newNode
+      case (prefix, next) of
+        ([], Left newNode) -> return newNode
+        (_, Left newNode) -> Shortcut prefix . Left <$> putNode newNode
+        (_, Right bs) -> return $ Shortcut prefix $ Right bs
+    doInsert (Full refs val) = case path of
+      [] -> return $ Full refs bs
+      (p:ps) -> do
+        let index = word4toInt p
+            ref = refs `Seq.index` index
+        newRef <- insertRef ref ps bs
+        let newRefs = Seq.update index newRef refs
+        return $ Full newRefs val
+
+    splitPrefix [] b = ([], [], b)
+    splitPrefix a [] = ([], a, [])
     splitPrefix (a:as) (b:bs)
       | a == b =
         let (prefix, aSuffix, bSuffix) = splitPrefix as bs
         in (a:prefix, aSuffix, bSuffix)
       | otherwise = ([], a:as, b:bs)
-insertPath (Full refs val) [] bs = return $ Full refs bs 
-insertPath (Full refs val) (p:ps) bs = do
-  let index = word4toInt p
-      ref = refs `Seq.index` index
-  node <- getNode ref
-  newNode <- insertPath node ps bs
-  nrmlNode <- normalize newNode
-  newRef <- putNode nrmlNode
-  let newRefs = Seq.update index newRef refs
-  normalize $ Full newRefs val
-  
+
 insertRef :: Ref -> Path -> ByteString -> NodeDB Ref
 insertRef ref path bs = do
   node <- getNode ref
