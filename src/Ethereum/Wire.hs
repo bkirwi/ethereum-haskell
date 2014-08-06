@@ -1,9 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module Ethereum.Wire(
-    parseMessage, buildMessage
-  , Payload(..), Hello(..), Disconnect(..)
-  ) where
+module Ethereum.Wire where
 
 import Control.Error
 import Control.Monad
@@ -17,21 +14,21 @@ import qualified Ethereum.RLP as RLP
 import Ethereum.RLP(tagged, asProduct, asUnderlying)
 import Ethereum.Trie(Digest)
 
-data Payload = 
-    HelloP Hello
-  | DisconnectP Disconnect
-  | PingP Ping
-  | PongP Pong
-  | GetPeersP GetPeers
-  | PeersP Peers
-  | TransactionsP Transactions
-  | BlocksP Blocks
-  | GetChainP GetChain
-  | NotInChainP NotInChain
-  | GetTransactionsP GetTransactions
+data Message = 
+    HelloMsg Hello
+  | DisconnectMsg Disconnect
+  | PingMsg Ping
+  | PongMsg Pong
+  | GetPeersMsg GetPeers
+  | PeersMsg Peers
+  | TransactionsMsg Transactions
+  | BlocksMsg Blocks
+  | GetChainMsg GetChain
+  | NotInChainMsg NotInChain
+  | GetTransactionsMsg GetTransactions
   deriving (Show, Generic)
 
-instance RLP.Convert Payload where converter = asUnderlying
+instance RLP.Convert Message where converter = asUnderlying
 
 -- 'Session control'
 

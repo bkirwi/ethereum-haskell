@@ -26,7 +26,7 @@ main = withSocketsDo $ do
         , listenPort = read $ port options
         , nodeId = BS.replicate 64 0
         }
-      handle = handler $ HelloP hello
+      handle = handler $ HelloMsg hello
   svr <- async $ server handle $ port options
   mapM_ (async . makeClient handle) $ seeds options
   wait svr
@@ -54,7 +54,7 @@ makeClient handler hostPort = do
 
 type Handler = (Socket, SockAddr) -> IO ()
 
-handler :: Payload -> Handler
+handler :: Message -> Handler
 handler hello (socket, sockAddr) = do
   putStrLn $ "Recieved connection from " <> show sockAddr
   let bytes = fromSocket socket 4096
