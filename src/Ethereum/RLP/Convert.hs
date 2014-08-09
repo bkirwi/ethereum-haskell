@@ -27,6 +27,10 @@ toItem = convertToRLP converter
 fromItem :: Convert a => Item -> Maybe a
 fromItem = convertFromRLP converter
 
+-- | Takes an existing converter as input. If our @a@ is represented as
+-- a list, we generate a conversion that represents @a@ using the same
+-- list, but with an integer tag prepended. If @a@ is instead represented
+-- as a string of bytes, pass that through unchanged.
 tagged :: Int -> Converter a -> Converter a
 tagged n conv = Converter to from
   where
@@ -79,8 +83,14 @@ instance Convert Int where
         | n >= 0 = String $ encodeInt n
         | otherwise = error "Can't encode a negative integral type"
 
--- Generics!
-
+-- | Converts between an arbitrary datatype (with a Generic instance) and
+-- its 'product' representation: an n-field constructor is represented as
+-- an n-element list.
+--
+-- Elements of a sum type are untagged, so if the fields in two
+-- constructors have the same representations, decoding will be ambiguous.
+-- In this case, it selects the first constructor in the sum. clients
+-- should ensure this ambiguity does not exist.
 asProduct :: (Generic a, ConvertProduct (Rep a)) => Converter a
 asProduct = Converter to from
   where
@@ -134,6 +144,14 @@ instance ConvertProduct a => ConvertProduct (M1 i c a) where
 
 -- Basic - unwrapped version
 
+-- | This converter just uses the representation for each constructor's
+-- field, passing it through unchanged. As such, it only supports types 
+-- where each constructor has exactly one field.
+--
+-- Elements of a sum type are untagged, so if the fields in two
+-- constructors have the same representations, decoding will be ambiguous.
+-- In this case, it selects the first constructor in the sum. clients
+-- should ensure this ambiguity does not exist.
 asUnderlying :: (Generic a, ConvertUnderlying (Rep a)) => Converter a
 asUnderlying = Converter to from
   where
