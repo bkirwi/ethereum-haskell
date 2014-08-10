@@ -28,7 +28,7 @@ data Message =
   | GetTransactionsMsg GetTransactions
   deriving (Show, Generic)
 
-instance RLP.Convert Message where converter = asUnderlying
+instance RLP.Convertible Message where converter = asUnderlying
 
 -- 'Session control'
 
@@ -41,7 +41,7 @@ data Hello = Hello
   , nodeId :: ByteString
   } deriving (Show, Generic)
 
-instance RLP.Convert Hello where converter = tagged 0x00 asProduct
+instance RLP.Convertible Hello where converter = tagged 0x00 asProduct
 
 data DisconnectReason = 
     DisconnectRequested
@@ -63,28 +63,28 @@ maybeReason n
     min = fromEnum (minBound :: DisconnectReason)
     max = fromEnum (maxBound :: DisconnectReason)
 
-instance RLP.Convert DisconnectReason where
+instance RLP.Convertible DisconnectReason where
   converter = RLP.Converter (RLP.toItem . fromEnum) (maybeReason <=< RLP.fromItem)
 
 data Disconnect = Disconnect DisconnectReason
   deriving (Show, Generic)
 
-instance RLP.Convert Disconnect where converter = tagged 0x01 asProduct
+instance RLP.Convertible Disconnect where converter = tagged 0x01 asProduct
 
 data Ping = Ping deriving (Show, Generic)
 
-instance RLP.Convert Ping where converter = tagged 0x02 asProduct
+instance RLP.Convertible Ping where converter = tagged 0x02 asProduct
 
 data Pong = Pong deriving (Show, Generic)
 
-instance RLP.Convert Pong where converter = tagged 0x03 asProduct
+instance RLP.Convertible Pong where converter = tagged 0x03 asProduct
 
 
 -- 'Information'
 
 data GetPeers = GetPeers deriving (Show, Generic)
 
-instance RLP.Convert GetPeers where converter = tagged 0x10 asProduct
+instance RLP.Convertible GetPeers where converter = tagged 0x10 asProduct
 
 data Peer = Peer
   { peerAddress :: ByteString
@@ -92,23 +92,23 @@ data Peer = Peer
   , peerUniqueId :: ByteString
   } deriving (Show, Generic)
 
-instance RLP.Convert Peer
+instance RLP.Convertible Peer
 
 data Peers = Peers [Peer] deriving (Show, Generic)
 
-instance RLP.Convert Peers where converter = tagged 0x11 asUnderlying
+instance RLP.Convertible Peers where converter = tagged 0x11 asUnderlying
 
 data Transactions = Transactions [Transaction] deriving (Show, Generic)
 
-instance RLP.Convert Transactions where converter = tagged 0x12 asUnderlying
+instance RLP.Convertible Transactions where converter = tagged 0x12 asUnderlying
 
 data Blocks = Blocks [Block] deriving (Show, Generic)
 
-instance RLP.Convert Blocks where converter = tagged 0x13 asUnderlying
+instance RLP.Convertible Blocks where converter = tagged 0x13 asUnderlying
 
 data GetChain = GetChain [Digest] Int deriving (Show, Generic)
 
-instance RLP.Convert GetChain where
+instance RLP.Convertible GetChain where
   converter = tagged 0x14 convertGet
     where
       convertGet = RLP.Converter to from
@@ -125,11 +125,11 @@ instance RLP.Convert GetChain where
 
 data NotInChain = NotInChain Digest deriving (Show, Generic)
 
-instance RLP.Convert NotInChain where converter = tagged 0x15 asProduct
+instance RLP.Convertible NotInChain where converter = tagged 0x15 asProduct
 
 data GetTransactions = GetTransactions deriving (Show, Generic)
 
-instance RLP.Convert GetTransactions where converter = tagged 0x16 asProduct
+instance RLP.Convertible GetTransactions where converter = tagged 0x16 asProduct
 
 
 -- Serialization

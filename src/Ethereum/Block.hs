@@ -10,7 +10,7 @@ import qualified Ethereum.RLP as RLP
 import Ethereum.Trie(Digest)
 
 newtype Address = Address ByteString
-  deriving (Show, RLP.Convert)
+  deriving (Show, RLP.Convertible)
 
 type Timestamp = Integer
 
@@ -61,11 +61,11 @@ data Receipt = Receipt
   , receiptGas :: Integer
   } deriving (Show, Generic)
 
-instance RLP.Convert Block
-instance RLP.Convert BlockHeader
-instance RLP.Convert Account
-instance RLP.Convert Transaction
-instance RLP.Convert Receipt
+instance RLP.Convertible Block
+instance RLP.Convertible BlockHeader
+instance RLP.Convertible Account
+instance RLP.Convertible Transaction
+instance RLP.Convertible Receipt
 
 type AccountDB a = DB Address Account a
 

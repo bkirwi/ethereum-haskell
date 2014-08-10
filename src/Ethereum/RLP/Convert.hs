@@ -1,5 +1,5 @@
 {-# LANGUAGE DefaultSignatures, DeriveGeneric, TypeOperators, FlexibleContexts #-}
-module Ethereum.RLP.Convert(Convert, toItem, fromItem, converter, asUnderlying, asProduct, tagged, Converter(..)) where
+module Ethereum.RLP.Convert(Convertible, toItem, fromItem, converter, asUnderlying, asProduct, tagged, Converter(..)) where
 
 import Control.Applicative
 import qualified Data.Sequence as Seq
@@ -16,15 +16,15 @@ data Converter a = Converter
   , convertFromRLP :: Item -> Maybe a
   }
 
-class Convert a where
+class Convertible a where
   converter :: Converter a
   default converter :: (Generic a, ConvertProduct (Rep a)) => Converter a
   converter = asProduct
 
-toItem :: Convert a => a -> Item
+toItem :: Convertible a => a -> Item
 toItem = convertToRLP converter
 
-fromItem :: Convert a => Item -> Maybe a
+fromItem :: Convertible a => Item -> Maybe a
 fromItem = convertFromRLP converter
 
 -- | Takes an existing converter as input. If our @a@ is represented as
@@ -42,30 +42,30 @@ tagged n conv = Converter to from
     from (List _) = Nothing
     from item = convertFromRLP conv item
 
-instance Convert Item where
+instance Convertible Item where
   converter = Converter id Just
 
-instance Convert ByteString where
+instance Convertible ByteString where
   converter = Converter to from
     where
       from (String bs) = Just bs
       from (List _) = Nothing
       to = String
 
-instance Convert a => Convert [a] where
+instance Convertible a => Convertible [a] where
   converter = Converter to from
     where
       from (List list) = mapM fromItem list
       from (String _) = Nothing
       to = List . map toItem
 
-instance Convert a => Convert (Seq.Seq a) where
+instance Convertible a => Convertible (Seq.Seq a) where
   converter = Converter to from
     where
       from item = Seq.fromList <$> fromItem item
       to = toItem . toList
 
-instance Convert Integer where
+instance Convertible Integer where
   converter = Converter to from
     where
       from (String s) = decodeInt s
@@ -74,7 +74,7 @@ instance Convert Integer where
         | n >= 0 = String $ encodeInt n
         | otherwise = error "Can't encode a negative integral type"
 
-instance Convert Int where
+instance Convertible Int where
   converter = Converter to from
     where
       from (String s) = decodeInt s
@@ -112,7 +112,7 @@ instance ConvertProduct U1 where
   partialFromItems x = Just (U1, x)
   productToItems _ = []
 
-instance Convert a => ConvertProduct (K1 i a) where
+instance Convertible a => ConvertProduct (K1 i a) where
   partialFromItems (item : rest) = do
     x <- fromItem item
     return (K1 x, rest)
@@ -166,7 +166,7 @@ instance ConvertUnderlying a => ConvertUnderlying (M1 i c a) where
   underlyingFromItem x = M1 <$> underlyingFromItem x
   underlyingToItem (M1 x) = underlyingToItem x
 
-instance Convert a => ConvertUnderlying (K1 i a) where
+instance Convertible a => ConvertUnderlying (K1 i a) where
   underlyingFromItem item = K1 <$> fromItem item
   underlyingToItem (K1 x) = toItem x
 

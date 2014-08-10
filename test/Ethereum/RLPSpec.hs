@@ -71,13 +71,13 @@ data Union = OneU One
 
 data Breaky = ShortB ByteString | LongB ByteString ByteString deriving (Show, Eq, Generic)
 
-instance RLP.Convert Empty
-instance RLP.Convert Single
-instance RLP.Convert Many
-instance RLP.Convert One where converter = tagged 0 asProduct
-instance RLP.Convert Other where converter = tagged 1 asProduct
-instance RLP.Convert Union where converter = asUnderlying
-instance RLP.Convert Breaky
+instance RLP.Convertible Empty
+instance RLP.Convertible Single
+instance RLP.Convertible Many
+instance RLP.Convertible One where converter = tagged 0 asProduct
+instance RLP.Convertible Other where converter = tagged 1 asProduct
+instance RLP.Convertible Union where converter = asUnderlying
+instance RLP.Convertible Breaky
 
 spec :: Spec
 spec = do

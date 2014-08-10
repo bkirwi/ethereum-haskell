@@ -23,7 +23,7 @@ import qualified Ethereum.RLP as RLP
 import Ethereum.Trie.Path
 
 newtype Digest = Digest ByteString
-  deriving (Ord, Eq, RLP.Convert)
+  deriving (Ord, Eq, RLP.Convertible)
 
 instance Show Digest where
   show (Digest bs) = map (intToDigit . word4toInt) $ unpackWord4s bs 
@@ -36,7 +36,7 @@ data Node = Empty
           | Full (Seq Ref) ByteString
   deriving (Show, Eq)
 
-instance RLP.Convert Ref where
+instance RLP.Convertible Ref where
   converter = RLP.Converter to from
     where
       to (Hash h) = RLP.toItem h
@@ -47,7 +47,7 @@ instance RLP.Convert Ref where
           then RLP.decode bytes >>= RLP.fromItem
           else return . Hash . Digest $ bytes
 
-instance RLP.Convert Node where
+instance RLP.Convertible Node where
   converter = RLP.Converter to from
     where
       to Empty = RLP.toItem BS.empty
