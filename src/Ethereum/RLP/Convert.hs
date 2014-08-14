@@ -35,7 +35,7 @@ tagged n conv = Converter to from
       List list -> List (tag:list)
       other -> other
     from (List (x:xs)) | x == tag = convertFromRLP conv $ List xs
-    from (List []) = Nothing
+    from (List _) = Nothing
     from item = convertFromRLP conv item
 
 instance Convert Item where
