@@ -90,14 +90,11 @@ lookupPath :: Ref -> Path -> NodeDB ByteString
 lookupPath root path = getNode root >>= getVal
   where
     getVal Empty = return BS.empty
-    getVal (Shortcut nodePath (Right val)) = 
-      return $ case stripPrefix nodePath path of
-        Just [] -> val
-        _ -> BS.empty
-    getVal (Shortcut nodePath (Left ref)) =
-      case stripPrefix nodePath path of
-        Nothing -> return BS.empty
-        Just remaining -> lookupPath ref remaining
+    getVal (Shortcut nodePath result) = 
+      case (stripPrefix nodePath path, result) of
+        (Just [], Right value) -> return value
+        (Just remaining, Left ref) -> lookupPath ref remaining
+        _ -> return BS.empty
     getVal (Full refs val) = case path of
       [] -> return val
       (w:rest) -> lookupPath (refs `Seq.index` word4toInt w) rest
