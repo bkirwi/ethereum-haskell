@@ -74,11 +74,8 @@ runDB :: Monad m
       -> (k -> m v)       -- ^ The 'get' function for the same monad 
       -> DB k v a         -- ^ The puts and gets to execute 
       -> m a
-runDB put get (DB db) = case db of
-  Pure a -> return a 
-  Free (Put k v next) -> do
-    put k v
-    runDB put get $ DB next
-  Free (Get k handler) -> do
-    v <- get k
-    runDB put get $ DB $ handler v
+runDB put get (DB ops) = go ops
+  where
+    go (Pure a) = return a 
+    go (Free (Put k v next)) = put k v >> go next
+    go (Free (Get k handler)) = get k >>= go . handler
