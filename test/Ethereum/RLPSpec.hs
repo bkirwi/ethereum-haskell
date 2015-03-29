@@ -81,19 +81,6 @@ instance RLP.Convertible Breaky
 
 spec :: Spec
 spec = do
-
-  it "should decode what it encodes (ints)" $ property $ \n ->
-    (n :: Int) >= 0 ==> (decodeInt . encodeInt $ n) `shouldBe` Just n
-
-  it "fails to decode zero-prefixed integers" $ property $ \n padding ->
-    padding > 0  && n >= 0 ==>
-      let padded = BS.replicate padding 0 <> encodeInt (n :: Int)
-      in decodeInt padded `shouldBe` Nothing
-
-  describe "handle example integer conversions" $ do
-    it "should encode 15" $ encodeInt 15 `shouldBe` "\x0f"
-    it "should encode 1024" $ encodeInt 1024 `shouldBe` "\x04\x00"
-
   it "should decode what it encodes" $ property $ \rlp ->
     (RLP.decode . RLP.encode $ rlp) `shouldBe` Just rlp
 
